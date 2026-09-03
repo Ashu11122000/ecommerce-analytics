@@ -1,0 +1,28 @@
+name: "ecommerce_dbt"
+version: "1.0.0"
+config-version: 2
+
+profile: "ecommerce_dbt"
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  ecommerce_dbt:
+    bronze:
+      +schema: bronze
+      +materialized: view
+
+    silver:
+      +schema: silver
+      +materialized: view
+
+    gold:
+      +schema: gold
+      +materialized: table
