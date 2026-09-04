@@ -21,8 +21,18 @@ models:
         tests:
           - not_null
 
+      - name: city
+        description: "City where the customer is located."
+        tests:
+          - not_null
+
       - name: signup_date
         description: "Date when the customer signed up."
+        tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw source layer."
         tests:
           - not_null
 
@@ -56,6 +66,11 @@ models:
         tests:
           - not_null
 
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw source layer."
+        tests:
+          - not_null
+
       - name: loaded_at
         description: "Timestamp when the Bronze model was built."
         tests:
@@ -83,6 +98,11 @@ models:
 
       - name: order_status
         description: "Current status of the order."
+        tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw source layer."
         tests:
           - not_null
 
@@ -118,6 +138,11 @@ models:
 
       - name: unit_price
         description: "Historical price per unit at the time of purchase."
+        tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw source layer."
         tests:
           - not_null
 
