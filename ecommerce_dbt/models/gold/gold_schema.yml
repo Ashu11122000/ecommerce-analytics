@@ -31,6 +31,26 @@ models:
         tests:
           - not_null
 
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold model was built."
+        tests:
+          - not_null
+
   - name: dim_products
     description: "Gold layer product dimension containing one row per product."
 
@@ -53,6 +73,26 @@ models:
 
       - name: price
         description: "Current product price."
+        tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold model was built."
         tests:
           - not_null
 
@@ -106,5 +146,25 @@ models:
 
       - name: total_amount
         description: "Total revenue for the order item, calculated as quantity multiplied by unit_price."
+        tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp when the order item was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the order item was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the order item was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold fact model was built."
         tests:
           - not_null

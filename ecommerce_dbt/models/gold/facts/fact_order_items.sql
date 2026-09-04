@@ -13,7 +13,14 @@ SELECT
     o.order_date,
     oi.quantity,
     oi.unit_price,
-    oi.quantity * oi.unit_price AS total_amount
+    oi.quantity * oi.unit_price AS total_amount,
+
+    -- Data lineage timestamps
+    oi.ingested_at,
+    oi.loaded_at,
+    oi.transformed_at,
+
+    CURRENT_TIMESTAMP AS modeled_at
 
 FROM {{ ref('silver_order_items') }} AS oi
 
