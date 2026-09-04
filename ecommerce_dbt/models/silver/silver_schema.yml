@@ -1,0 +1,124 @@
+version: 2
+
+models:
+  - name: silver_customers
+    description: "Cleaned and standardized customer data for downstream analytics."
+
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_name
+        description: "Standardized customer name."
+        tests:
+          - not_null
+
+      - name: email
+        description: "Standardized customer email address."
+        tests:
+          - not_null
+
+      - name: city
+        description: "Customer city, with missing values replaced by Unknown."
+        tests:
+          - not_null
+
+      - name: signup_date
+        description: "Date when the customer signed up."
+        tests:
+          - not_null
+
+  - name: silver_products
+    description: "Cleaned and validated product catalog data."
+
+    columns:
+      - name: product_id
+        description: "Unique identifier for each product."
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        description: "Standardized product name."
+        tests:
+          - not_null
+
+      - name: category
+        description: "Product category."
+        tests:
+          - not_null
+
+      - name: price
+        description: "Current product price."
+        tests:
+          - not_null
+
+  - name: silver_orders
+    description: "Cleaned and standardized order transaction data."
+
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Identifier of the customer who placed the order."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_customers')
+                field: customer_id
+
+      - name: order_date
+        description: "Timestamp when the order was placed."
+        tests:
+          - not_null
+
+      - name: order_status
+        description: "Standardized order status."
+        tests:
+          - not_null
+
+  - name: silver_order_items
+    description: "Cleaned and validated line-item level order transaction data."
+
+    columns:
+      - name: order_item_id
+        description: "Unique identifier for each order item."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order containing this item."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_id
+
+      - name: product_id
+        description: "Identifier of the purchased product."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_products')
+                field: product_id
+
+      - name: quantity
+        description: "Number of units purchased."
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: "Historical price per unit at the time of purchase."
+        tests:
+          - not_null
