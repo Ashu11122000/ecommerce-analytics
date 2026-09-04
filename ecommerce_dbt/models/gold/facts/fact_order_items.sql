@@ -20,7 +20,7 @@ SELECT
     oi.loaded_at,
     oi.transformed_at,
 
-    CURRENT_TIMESTAMP AS modeled_at
+    {{ modeled_timestamp() }} AS modeled_at
 
 FROM {{ ref('silver_order_items') }} AS oi
 
