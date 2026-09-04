@@ -1,0 +1,110 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Gold layer customer dimension containing one row per customer."
+
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_name
+        description: "Customer's standardized full name."
+        tests:
+          - not_null
+
+      - name: email
+        description: "Customer's standardized email address."
+        tests:
+          - not_null
+
+      - name: city
+        description: "Customer's city."
+        tests:
+          - not_null
+
+      - name: signup_date
+        description: "Date when the customer signed up."
+        tests:
+          - not_null
+
+  - name: dim_products
+    description: "Gold layer product dimension containing one row per product."
+
+    columns:
+      - name: product_id
+        description: "Unique identifier for each product."
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        description: "Standardized product name."
+        tests:
+          - not_null
+
+      - name: category
+        description: "Product category."
+        tests:
+          - not_null
+
+      - name: price
+        description: "Current product price."
+        tests:
+          - not_null
+
+  - name: fact_order_items
+    description: "Gold layer fact table with one row representing one product item within one order."
+
+    columns:
+      - name: order_item_id
+        description: "Unique identifier for each order item."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order containing this item."
+        tests:
+          - not_null
+
+      - name: customer_id
+        description: "Identifier of the customer who placed the order."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+
+      - name: product_id
+        description: "Identifier of the purchased product."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: order_date
+        description: "Timestamp when the order was placed."
+        tests:
+          - not_null
+
+      - name: quantity
+        description: "Number of units purchased."
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: "Historical price per unit at the time of purchase."
+        tests:
+          - not_null
+
+      - name: total_amount
+        description: "Total revenue for the order item, calculated as quantity multiplied by unit_price."
+        tests:
+          - not_null
