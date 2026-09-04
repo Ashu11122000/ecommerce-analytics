@@ -5,6 +5,17 @@ sources:
     description: "Raw OLTP-style source tables for the E-Commerce Analytics Engineering project."
     schema: raw
 
+    config:
+      freshness:
+        warn_after:
+          count: 24
+          period: hour
+        error_after:
+          count: 48
+          period: hour
+
+      loaded_at_field: ingested_at
+
     tables:
       - name: customers
         description: "Raw customer master data."
