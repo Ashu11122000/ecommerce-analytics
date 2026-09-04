@@ -3,7 +3,8 @@ SELECT
     TRIM(product_name) AS product_name,
     TRIM(category) AS category,
     price,
-    loaded_at
+    ingested_at,
+    loaded_at,
+    CURRENT_TIMESTAMP AS transformed_at
+
 FROM {{ ref('bronze_products') }}
-WHERE product_id IS NOT NULL
-  AND price > 0

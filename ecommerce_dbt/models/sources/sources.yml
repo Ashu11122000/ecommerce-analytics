@@ -19,12 +19,32 @@ sources:
     tables:
       - name: customers
         description: "Raw customer master data."
+        config:
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}
+          loaded_at_field: ingested_at
 
       - name: products
         description: "Raw product catalog data."
+        config:
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}
+          loaded_at_field: ingested_at
 
       - name: orders
         description: "Raw customer order transactions."
+        config:
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}
+          loaded_at_field: ingested_at
 
       - name: order_items
         description: "Raw line-item level order transaction data."
+        config:
+          freshness:
+            warn_after: {count: 24, period: hour}
+            error_after: {count: 48, period: hour}
+          loaded_at_field: ingested_at
