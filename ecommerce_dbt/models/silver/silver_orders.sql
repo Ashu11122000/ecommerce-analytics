@@ -5,6 +5,6 @@ SELECT
     LOWER(TRIM(order_status)) AS order_status,
     ingested_at,
     loaded_at,
-    CURRENT_TIMESTAMP AS transformed_at
+    {{ transformed_timestamp() }} AS transformed_at
 
 FROM {{ ref('bronze_orders') }}
