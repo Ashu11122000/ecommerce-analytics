@@ -1,0 +1,127 @@
+version: 2
+
+models:
+  - name: bronze_customers
+    description: "Bronze layer model containing customer data copied from the raw source with minimal transformation."
+
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_name
+        description: "Customer's full name."
+        tests:
+          - not_null
+
+      - name: email
+        description: "Customer email address."
+        tests:
+          - not_null
+
+      - name: signup_date
+        description: "Date when the customer signed up."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
+
+  - name: bronze_products
+    description: "Bronze layer model containing product catalog data copied from the raw source with minimal transformation."
+
+    columns:
+      - name: product_id
+        description: "Unique identifier for each product."
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        description: "Name of the product."
+        tests:
+          - not_null
+
+      - name: category
+        description: "Product category."
+        tests:
+          - not_null
+
+      - name: price
+        description: "Current listed product price."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
+
+  - name: bronze_orders
+    description: "Bronze layer model containing order transaction data copied from the raw source with minimal transformation."
+
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Identifier of the customer who placed the order."
+        tests:
+          - not_null
+
+      - name: order_date
+        description: "Timestamp when the order was placed."
+        tests:
+          - not_null
+
+      - name: order_status
+        description: "Current status of the order."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
+
+  - name: bronze_order_items
+    description: "Bronze layer model containing line-item level order data copied from the raw source with minimal transformation."
+
+    columns:
+      - name: order_item_id
+        description: "Unique identifier for each order item."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order containing this item."
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Identifier of the purchased product."
+        tests:
+          - not_null
+
+      - name: quantity
+        description: "Number of units purchased."
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: "Historical price per unit at the time of purchase."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
