@@ -1,8 +1,12 @@
 version: 2
 
 models:
+  # ============================================================
+  # BRONZE CUSTOMERS
+  # ============================================================
+
   - name: bronze_customers
-    description: "Bronze layer model containing customer data copied from the raw source with minimal transformation."
+    description: "Bronze layer customer data with basic text standardization and technical ingestion metadata."
 
     columns:
       - name: customer_id
@@ -12,27 +16,52 @@ models:
           - unique
 
       - name: customer_name
-        description: "Customer's full name."
+        description: "Customer's full name with surrounding whitespace removed."
         tests:
           - not_null
 
       - name: email
-        description: "Customer email address."
+        description: "Customer email address standardized to lowercase and trimmed."
         tests:
           - not_null
 
+      - name: phone
+        description: "Customer phone number with empty strings converted to NULL."
+
+      - name: gender
+        description: "Customer gender standardized for consistent capitalization."
+
+      - name: date_of_birth
+        description: "Customer date of birth."
+
       - name: city
-        description: "City where the customer is located."
-        tests:
-          - not_null
+        description: "Customer city standardized for consistent capitalization."
+
+      - name: state
+        description: "Customer state standardized for consistent capitalization."
+
+      - name: country
+        description: "Customer country standardized for consistent capitalization."
+
+      - name: postal_code
+        description: "Customer postal code with surrounding whitespace removed."
+
+      - name: customer_segment
+        description: "Customer segment standardized for consistent capitalization."
+
+      - name: customer_status
+        description: "Customer status standardized for consistent capitalization."
 
       - name: signup_date
         description: "Date when the customer signed up."
         tests:
           - not_null
 
+      - name: updated_at
+        description: "Timestamp when the source customer record was last updated."
+
       - name: ingested_at
-        description: "Timestamp when the record was ingested into the raw source layer."
+        description: "Timestamp when the customer record was ingested into the raw source layer."
         tests:
           - not_null
 
@@ -41,8 +70,12 @@ models:
         tests:
           - not_null
 
+  # ============================================================
+  # BRONZE PRODUCTS
+  # ============================================================
+
   - name: bronze_products
-    description: "Bronze layer model containing product catalog data copied from the raw source with minimal transformation."
+    description: "Bronze layer product catalog data with basic text standardization and technical ingestion metadata."
 
     columns:
       - name: product_id
@@ -52,22 +85,47 @@ models:
           - unique
 
       - name: product_name
-        description: "Name of the product."
+        description: "Product name with surrounding whitespace removed."
         tests:
           - not_null
 
       - name: category
-        description: "Product category."
+        description: "Product category standardized for consistent capitalization."
         tests:
           - not_null
 
-      - name: price
-        description: "Current listed product price."
-        tests:
-          - not_null
+      - name: subcategory
+        description: "Product subcategory standardized for consistent capitalization."
+
+      - name: brand
+        description: "Product brand standardized for consistent capitalization."
+
+      - name: supplier_id
+        description: "Identifier of the product supplier."
+
+      - name: cost_price
+        description: "Cost price of the product."
+
+      - name: selling_price
+        description: "Selling price of the product."
+
+      - name: stock_quantity
+        description: "Current available stock quantity."
+
+      - name: reorder_level
+        description: "Stock level at which product replenishment should be considered."
+
+      - name: product_status
+        description: "Product status standardized for consistent capitalization."
+
+      - name: launch_date
+        description: "Date when the product was launched."
+
+      - name: updated_at
+        description: "Timestamp when the source product record was last updated."
 
       - name: ingested_at
-        description: "Timestamp when the record was ingested into the raw source layer."
+        description: "Timestamp when the product record was ingested into the raw source layer."
         tests:
           - not_null
 
@@ -76,8 +134,12 @@ models:
         tests:
           - not_null
 
+  # ============================================================
+  # BRONZE ORDERS
+  # ============================================================
+
   - name: bronze_orders
-    description: "Bronze layer model containing order transaction data copied from the raw source with minimal transformation."
+    description: "Bronze layer order transaction data with basic status, text, and numeric standardization."
 
     columns:
       - name: order_id
@@ -97,12 +159,39 @@ models:
           - not_null
 
       - name: order_status
-        description: "Current status of the order."
+        description: "Current order status standardized for consistent capitalization."
         tests:
           - not_null
 
+      - name: payment_status
+        description: "Payment status associated with the order."
+
+      - name: shipping_method
+        description: "Shipping method standardized for consistent capitalization."
+
+      - name: shipping_cost
+        description: "Shipping cost with NULL values standardized to zero."
+
+      - name: discount_amount
+        description: "Order discount amount with NULL values standardized to zero."
+
+      - name: tax_amount
+        description: "Order tax amount with NULL values standardized to zero."
+
+      - name: total_amount
+        description: "Total order amount from the source system."
+
+      - name: sales_channel
+        description: "Sales channel standardized for consistent capitalization."
+
+      - name: currency
+        description: "Order currency standardized to uppercase."
+
+      - name: updated_at
+        description: "Timestamp when the source order record was last updated."
+
       - name: ingested_at
-        description: "Timestamp when the record was ingested into the raw source layer."
+        description: "Timestamp when the order record was ingested into the raw source layer."
         tests:
           - not_null
 
@@ -111,8 +200,12 @@ models:
         tests:
           - not_null
 
+  # ============================================================
+  # BRONZE ORDER ITEMS
+  # ============================================================
+
   - name: bronze_order_items
-    description: "Bronze layer model containing line-item level order data copied from the raw source with minimal transformation."
+    description: "Bronze layer line-item data with basic numeric standardization and technical ingestion metadata."
 
     columns:
       - name: order_item_id
@@ -141,8 +234,189 @@ models:
         tests:
           - not_null
 
+      - name: discount_amount
+        description: "Line-item discount amount with NULL values standardized to zero."
+
+      - name: tax_amount
+        description: "Line-item tax amount with NULL values standardized to zero."
+
+      - name: line_total
+        description: "Source line-item total amount."
+
+      - name: returned_quantity
+        description: "Number of units returned, with NULL values standardized to zero."
+
+      - name: updated_at
+        description: "Timestamp when the source order-item record was last updated."
+
       - name: ingested_at
-        description: "Timestamp when the record was ingested into the raw source layer."
+        description: "Timestamp when the order-item record was ingested into the raw source layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
+
+  # ============================================================
+  # BRONZE PAYMENTS
+  # ============================================================
+
+  - name: bronze_payments
+    description: "Bronze layer payment transaction data with basic text standardization and technical ingestion metadata."
+
+    columns:
+      - name: payment_id
+        description: "Unique identifier for each payment."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order associated with the payment."
+        tests:
+          - not_null
+
+      - name: payment_date
+        description: "Timestamp when the payment was processed."
+        tests:
+          - not_null
+
+      - name: payment_method
+        description: "Payment method standardized for consistent capitalization."
+        tests:
+          - not_null
+
+      - name: payment_status
+        description: "Payment status standardized for consistent capitalization."
+        tests:
+          - not_null
+
+      - name: amount
+        description: "Payment amount."
+        tests:
+          - not_null
+
+      - name: transaction_reference
+        description: "Payment transaction reference. Empty strings are converted to NULL."
+
+      - name: updated_at
+        description: "Timestamp when the source payment record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the payment record was ingested into the raw source layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
+
+  # ============================================================
+  # BRONZE SHIPMENTS
+  # ============================================================
+
+  - name: bronze_shipments
+    description: "Bronze layer shipment data with basic text standardization and technical ingestion metadata."
+
+    columns:
+      - name: shipment_id
+        description: "Unique identifier for each shipment."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order associated with the shipment."
+        tests:
+          - not_null
+
+      - name: shipping_method
+        description: "Shipping method standardized for consistent capitalization."
+        tests:
+          - not_null
+
+      - name: shipment_status
+        description: "Shipment status standardized for consistent capitalization."
+        tests:
+          - not_null
+
+      - name: shipped_at
+        description: "Timestamp when the shipment was shipped."
+
+      - name: delivered_at
+        description: "Timestamp when the shipment was delivered."
+
+      - name: delivery_city
+        description: "Delivery city standardized for consistent capitalization."
+
+      - name: delivery_state
+        description: "Delivery state standardized for consistent capitalization."
+
+      - name: updated_at
+        description: "Timestamp when the source shipment record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the shipment record was ingested into the raw source layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the Bronze model was built."
+        tests:
+          - not_null
+
+  # ============================================================
+  # BRONZE RETURNS
+  # ============================================================
+
+  - name: bronze_returns
+    description: "Bronze layer product return data with basic text standardization and technical ingestion metadata."
+
+    columns:
+      - name: return_id
+        description: "Unique identifier for each return."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_item_id
+        description: "Identifier of the order item associated with the return."
+        tests:
+          - not_null
+
+      - name: return_date
+        description: "Timestamp when the return occurred."
+        tests:
+          - not_null
+
+      - name: return_reason
+        description: "Reason for the return standardized for consistent capitalization."
+        tests:
+          - not_null
+
+      - name: return_quantity
+        description: "Number of units returned."
+        tests:
+          - not_null
+
+      - name: refund_amount
+        description: "Amount refunded for the return."
+        tests:
+          - not_null
+
+      - name: return_status
+        description: "Return status standardized for consistent capitalization."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "Timestamp when the source return record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the return record was ingested into the raw source layer."
         tests:
           - not_null
 
