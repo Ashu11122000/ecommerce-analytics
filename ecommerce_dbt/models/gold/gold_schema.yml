@@ -1,0 +1,429 @@
+version: 2
+
+models:
+
+  - name: dim_customers
+    description: "Gold customer dimension containing one row per customer and analytics-ready customer attributes."
+
+    columns:
+
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_name
+        description: "Customer's standardized full name."
+        tests:
+          - not_null
+
+      - name: email
+        description: "Customer's standardized email address."
+        tests:
+          - not_null
+
+      - name: gender
+        description: "Customer gender."
+
+      - name: age_group
+        description: "Business-friendly classification of the customer's age."
+
+      - name: city
+        description: "Customer's city."
+
+      - name: state
+        description: "Customer's state."
+
+      - name: country
+        description: "Customer's country."
+
+      - name: postal_code
+        description: "Customer's postal code."
+
+      - name: customer_segment
+        description: "Customer segment."
+
+      - name: customer_status_group
+        description: "Business-friendly grouping of customer status."
+
+      - name: signup_date
+        description: "Date when the customer signed up."
+        tests:
+          - not_null
+
+      - name: customer_age
+        description: "Customer age calculated from date of birth."
+
+      - name: customer_tenure_days
+        description: "Number of days since the customer signed up."
+
+      - name: is_active_customer
+        description: "Boolean flag indicating whether the customer is currently active."
+
+      - name: customer_lifecycle_stage
+        description: "Business classification of the customer based on tenure."
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold dimension was built."
+        tests:
+          - not_null
+
+  - name: dim_products
+    description: "Gold product dimension containing one row per product and analytics-ready product attributes."
+
+    columns:
+
+      - name: product_id
+        description: "Unique identifier for each product."
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        description: "Standardized product name."
+        tests:
+          - not_null
+
+      - name: category
+        description: "Product category."
+        tests:
+          - not_null
+
+      - name: subcategory
+        description: "Product subcategory."
+
+      - name: brand
+        description: "Product brand."
+
+      - name: supplier_id
+        description: "Identifier of the product supplier."
+
+      - name: cost_price
+        description: "Cost price of the product."
+
+      - name: selling_price
+        description: "Current selling price of the product."
+
+      - name: profit_amount
+        description: "Profit generated per product unit."
+
+      - name: profit_margin_pct
+        description: "Profit margin percentage calculated from cost and selling price."
+
+      - name: profit_margin_band
+        description: "Business classification of the product's profit margin."
+
+      - name: stock_quantity
+        description: "Current available stock quantity."
+
+      - name: reorder_level
+        description: "Stock level at which replenishment should be considered."
+
+      - name: stock_status
+        description: "Business classification of the product's current stock level."
+
+      - name: price_band
+        description: "Business classification of the product based on selling price."
+
+      - name: product_status
+        description: "Current product status."
+
+      - name: is_active_product
+        description: "Boolean flag indicating whether the product is currently active."
+
+      - name: launch_date
+        description: "Date when the product was launched."
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold dimension was built."
+        tests:
+          - not_null
+
+  - name: dim_date
+    description: "Gold date dimension containing one row per calendar date with standard calendar attributes."
+
+    columns:
+
+      - name: date_key
+        description: "Integer date key in YYYYMMDD format."
+        tests:
+          - not_null
+          - unique
+
+      - name: full_date
+        description: "Calendar date."
+        tests:
+          - not_null
+          - unique
+
+      - name: year
+        description: "Calendar year."
+
+      - name: quarter
+        description: "Calendar quarter."
+
+      - name: month
+        description: "Calendar month number."
+
+      - name: month_name
+        description: "Calendar month name."
+
+      - name: week_of_year
+        description: "Calendar week number."
+
+      - name: day_of_month
+        description: "Day number within the month."
+
+      - name: day_of_week
+        description: "Day number within the week."
+
+      - name: day_name
+        description: "Calendar day name."
+
+      - name: is_weekend
+        description: "Boolean flag indicating whether the date falls on a weekend."
+
+      - name: is_month_end
+        description: "Boolean flag indicating whether the date is the final day of its month."
+
+      - name: quarter_label
+        description: "Quarter label such as Q1-2026."
+
+      - name: month_label
+        description: "Month label in YYYY-MM format."
+
+      - name: modeled_at
+        description: "Timestamp when the Gold date dimension was built."
+        tests:
+          - not_null
+
+  - name: fact_order_items
+    description: "Gold order-item fact table with one row representing one product line item within one order."
+
+    columns:
+
+      - name: order_item_id
+        description: "Unique identifier for each order item."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order containing this item."
+        tests:
+          - not_null
+
+      - name: customer_id
+        description: "Identifier of the customer who placed the order."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+
+      - name: product_id
+        description: "Identifier of the purchased product."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: order_date_key
+        description: "Foreign key linking the order to the date dimension."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: order_date
+        description: "Timestamp when the order was placed."
+        tests:
+          - not_null
+
+      - name: order_status
+        description: "Order status associated with the order."
+
+      - name: sales_channel
+        description: "Channel through which the order was placed."
+
+      - name: currency
+        description: "Currency used for the order."
+
+      - name: quantity
+        description: "Number of units purchased."
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: "Historical price per unit at the time of purchase."
+        tests:
+          - not_null
+
+      - name: discount_amount
+        description: "Discount applied to the order item."
+
+      - name: tax_amount
+        description: "Tax applied to the order item."
+
+      - name: line_total
+        description: "Line-item total provided by the source system."
+
+      - name: calculated_line_total
+        description: "Line-item total independently calculated from quantity, unit price, discount, and tax."
+
+      - name: line_total_variance
+        description: "Difference between the source line total and calculated line total."
+
+      - name: is_line_total_mismatch
+        description: "Boolean flag indicating whether the source line total differs from the calculated value."
+
+      - name: has_negative_quantity
+        description: "Boolean flag identifying line items with a negative quantity."
+
+      - name: returned_quantity
+        description: "Number of units returned for the line item."
+
+      - name: has_return
+        description: "Boolean flag indicating whether the line item has returned units."
+
+      - name: return_rate
+        description: "Percentage of ordered quantity that was returned."
+
+      - name: gross_sales_amount
+        description: "Gross sales amount calculated as quantity multiplied by unit price."
+
+      - name: net_sales_amount
+        description: "Net sales amount calculated after discount and including tax."
+
+      - name: updated_at
+        description: "Timestamp when the source order-item record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold fact model was built."
+        tests:
+          - not_null
+
+  - name: fact_payments
+    description: "Gold payment fact table with one row representing one payment transaction."
+
+    columns:
+
+      - name: payment_id
+        description: "Unique identifier for each payment."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order associated with the payment."
+        tests:
+          - not_null
+
+      - name: payment_date_key
+        description: "Foreign key linking the payment to the date dimension."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: payment_method
+        description: "Payment method used for the transaction."
+
+      - name: payment_status
+        description: "Original payment status."
+
+      - name: payment_status_group
+        description: "Business-friendly grouping of payment statuses."
+
+      - name: amount
+        description: "Payment transaction amount."
+        tests:
+          - not_null
+
+      - name: is_successful_payment
+        description: "Boolean flag indicating whether the payment was successful."
+
+      - name: has_transaction_reference
+        description: "Boolean flag indicating whether a transaction reference is available."
+
+      - name: payment_amount_band
+        description: "Business classification of the payment amount."
+
+      - name: payment_update_delay_days
+        description: "Number of days between payment processing and source record update."
+
+      - name: updated_at
+        description: "Timestamp when the source payment record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the record was ingested into the raw data layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was transformed in the Silver layer."
+        tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp when the Gold fact model was built."
+        tests:
+          - not_null
