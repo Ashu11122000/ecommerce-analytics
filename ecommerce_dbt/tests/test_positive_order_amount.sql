@@ -1,9 +1,12 @@
 -- Custom data quality test:
--- Returns rows only when an order item has a non-positive total amount.
+-- Returns rows when an order item has a non-positive
+-- quantity or unit price.
 
 SELECT
     order_item_id,
     order_id,
-    total_amount
+    quantity,
+    unit_price
 FROM {{ ref('fact_order_items') }}
-WHERE total_amount <= 0
+WHERE quantity <= 0
+OR unit_price <= 0
