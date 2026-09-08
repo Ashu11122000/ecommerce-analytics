@@ -1176,11 +1176,6 @@ def generate_order_items(
     # This is intentionally inserted into RAW so that the
     # Silver layer can demonstrate data-quality handling.
     # --------------------------------------------------------
-
-    if len(order_items) > 20:
-
-        order_items[20]["quantity"] = -1
-
     # --------------------------------------------------------
     # Controlled data-quality issue #2
     # --------------------------------------------------------
