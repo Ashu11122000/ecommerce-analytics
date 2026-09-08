@@ -4,7 +4,7 @@ Generate realistic mock e-commerce RAW data.
 Output:
     sql/03_insert_raw_data.sql
 
-Generated RAW tables:
+The generated SQL loads:
     - customers
     - products
     - orders
@@ -17,49 +17,37 @@ Target record counts:
     - customers   = 120
     - products    = 500
     - orders      = 320
-    - order_items = approximately 600
+    - order_items = approximately 600+
     - payments    = 320
     - shipments   = 290
     - returns     = 30
 
-The generated data includes:
-    - realistic Indian e-commerce data
-    - valid primary/foreign-key relationships
-    - historical order-item prices
-    - business/event timestamps
-    - updated_at timestamps
-    - ingested_at timestamps
+The data includes:
+    - different business dates
+    - different ingestion batches
+    - realistic relationships
+    - historical product prices
+    - payment states
+    - shipment states
+    - returns
     - late-arriving records
     - updated records
     - NULL values
-    - controlled data-quality issues
-    - realistic order/payment/shipment/return states
+    - controlled data-quality scenarios
     - reproducible data using a fixed random seed
 
 Timestamp strategy:
+    - event/business timestamp = when the business event happened
+    - updated_at = when the source record was last updated
+    - ingested_at = when the record arrived in the RAW layer
 
-    event/business timestamp
-        =
-        when the business event actually happened
-
-    updated_at
-        =
-        when the source record was last updated
-
-    ingested_at
-        =
-        when the record arrived in the RAW layer
-
-Important:
-
-    RAW intentionally contains a small number of controlled
-    data-quality problems so that Bronze/Silver transformations
-    can demonstrate validation and cleansing.
+All normal generated timestamps are constrained to the
+DATA_AS_OF date.
 
 This script uses only Python standard-library modules.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 import random
@@ -71,35 +59,23 @@ import random
 
 RANDOM_SEED = 42
 
-# Simulated current/source-system date.
-DATA_AS_OF = datetime(
-    2026,
-    9,
-    8,
-    23,
-    59,
-    59,
-)
+# Simulated "current" date of the source/warehouse system.
+DATA_AS_OF = datetime(2026, 9, 8, 23, 59, 59)
 
 CUSTOMER_COUNT = 120
 PRODUCT_COUNT = 500
 ORDER_COUNT = 320
 
-# Approximately 600 order items.
-#
-# Distribution:
-#   15% -> 1 item
-#   70% -> 2 items
-#   15% -> 3 items
-#
-# Expected average = 2.0 items/order.
-#
-# With 320 orders, expected order items ~= 640.
+# 1-3 items per order gives approximately 600+ order items.
 MIN_ORDER_ITEMS = 1
 MAX_ORDER_ITEMS = 3
 
 PAYMENT_COUNT = 320
+
+# Keep this within the requested 280-300 range.
 SHIPMENT_COUNT = 290
+
+# Keep this within the requested 20-40 range.
 RETURN_COUNT = 30
 
 OUTPUT_FILE = (
@@ -132,22 +108,7 @@ FIRST_NAMES = [
     "Kavya",
     "Meera",
     "Pooja",
-    "Riya",
-    "Simran",
-    "Aditi",
-    "Nisha",
-    "Manish",
-    "Rajat",
-    "Aman",
-    "Sahil",
-    "Varun",
-    "Deepak",
-    "Nitin",
-    "Suresh",
-    "Ankit",
-    "Mohit",
 ]
-
 
 LAST_NAMES = [
     "Sharma",
@@ -162,16 +123,7 @@ LAST_NAMES = [
     "Reddy",
     "Nair",
     "Iyer",
-    "Kapoor",
-    "Malhotra",
-    "Bansal",
-    "Chopra",
-    "Sethi",
-    "Arora",
-    "Mishra",
-    "Pandey",
 ]
-
 
 LOCATIONS = [
     ("Mumbai", "Maharashtra", "400001"),
@@ -184,13 +136,7 @@ LOCATIONS = [
     ("Ahmedabad", "Gujarat", "380001"),
     ("Kolkata", "West Bengal", "700001"),
     ("Lucknow", "Uttar Pradesh", "226001"),
-    ("Chandigarh", "Chandigarh", "160001"),
-    ("Amritsar", "Punjab", "143001"),
-    ("Ludhiana", "Punjab", "141001"),
-    ("Bathinda", "Punjab", "151001"),
-    ("Indore", "Madhya Pradesh", "452001"),
 ]
-
 
 CATEGORIES = {
     "Electronics": [
@@ -229,7 +175,6 @@ CATEGORIES = {
     ],
 }
 
-
 BRANDS = [
     "Nova",
     "UrbanX",
@@ -241,13 +186,7 @@ BRANDS = [
     "Fusion",
     "Pulse",
     "Aura",
-    "TechPro",
-    "HomeCraft",
-    "StyleHub",
-    "Glow",
-    "ReadMore",
 ]
-
 
 CUSTOMER_SEGMENTS = [
     "Premium",
@@ -256,12 +195,10 @@ CUSTOMER_SEGMENTS = [
     "New",
 ]
 
-
 CUSTOMER_STATUSES = [
     "Active",
     "Inactive",
 ]
-
 
 ORDER_STATUSES = [
     "Pending",
@@ -272,6 +209,12 @@ ORDER_STATUSES = [
     "Returned",
 ]
 
+PAYMENT_STATUSES = [
+    "Paid",
+    "Pending",
+    "Failed",
+    "Refunded",
+]
 
 PAYMENT_METHODS = [
     "UPI",
@@ -279,9 +222,7 @@ PAYMENT_METHODS = [
     "Debit Card",
     "Net Banking",
     "Cash on Delivery",
-    "Wallet",
 ]
-
 
 SHIPPING_METHODS = [
     "Standard",
@@ -289,14 +230,12 @@ SHIPPING_METHODS = [
     "Same Day",
 ]
 
-
 SALES_CHANNELS = [
     "Website",
     "Mobile App",
     "Marketplace",
     "Store",
 ]
-
 
 SHIPMENT_STATUSES = [
     "Processing",
@@ -307,7 +246,6 @@ SHIPMENT_STATUSES = [
     "Cancelled",
 ]
 
-
 RETURN_REASONS = [
     "Damaged",
     "Wrong Product",
@@ -317,14 +255,12 @@ RETURN_REASONS = [
     "Late Delivery",
 ]
 
-
 RETURN_STATUSES = [
     "Requested",
     "Approved",
     "Completed",
     "Rejected",
 ]
-
 
 CURRENCY = "INR"
 
@@ -333,29 +269,18 @@ CURRENCY = "INR"
 # HELPER FUNCTIONS
 # ============================================================
 
-def random_date(
-    start_date: date,
-    end_date: date,
-) -> date:
-    """Return a random date between two dates."""
+def random_date(start_date: date, end_date: date) -> date:
+    """Return a random date between start_date and end_date."""
 
     if start_date > end_date:
         raise ValueError(
             "start_date cannot be after end_date."
         )
 
-    days = (
-        end_date - start_date
-    ).days
+    days = (end_date - start_date).days
 
-    return (
-        start_date
-        + timedelta(
-            days=random.randint(
-                0,
-                days,
-            )
-        )
+    return start_date + timedelta(
+        days=random.randint(0, days)
     )
 
 
@@ -366,7 +291,8 @@ def random_datetime(
     """
     Return a random datetime between two dates.
 
-    Generated datetime never exceeds DATA_AS_OF.
+    The generated datetime will never be later than
+    DATA_AS_OF.
     """
 
     if start_date > end_date:
@@ -379,13 +305,17 @@ def random_datetime(
         end_date,
     )
 
+    hour = random.randint(8, 21)
+    minute = random.randint(0, 59)
+    second = random.randint(0, 59)
+
     generated_datetime = datetime(
         selected_date.year,
         selected_date.month,
         selected_date.day,
-        random.randint(8, 21),
-        random.randint(0, 59),
-        random.randint(0, 59),
+        hour,
+        minute,
+        second,
     )
 
     return min(
@@ -399,7 +329,11 @@ def add_hours_capped(
     min_hours: int,
     max_hours: int,
 ) -> datetime:
-    """Add random hours without exceeding DATA_AS_OF."""
+    """
+    Add a random number of hours to a timestamp.
+
+    The result is capped at DATA_AS_OF.
+    """
 
     if min_hours > max_hours:
         raise ValueError(
@@ -427,7 +361,11 @@ def add_days_capped(
     min_days: int,
     max_days: int,
 ) -> datetime:
-    """Add random days without exceeding DATA_AS_OF."""
+    """
+    Add a random number of days to a timestamp.
+
+    The result is capped at DATA_AS_OF.
+    """
 
     if min_days > max_days:
         raise ValueError(
@@ -453,23 +391,19 @@ def add_days_capped(
 def money(value) -> Decimal:
     """Convert a value to a two-decimal monetary value."""
 
-    return Decimal(
-        str(value)
-    ).quantize(
+    return Decimal(str(value)).quantize(
         Decimal("0.01"),
         rounding=ROUND_HALF_UP,
     )
 
 
-def sql_string(value) -> str:
+def sql_string(value):
     """
     Convert Python values into SQL literals.
 
-    None       -> NULL
-    Decimal    -> numeric literal
-    int/float  -> numeric literal
-    date/time  -> quoted literal
-    string     -> escaped quoted literal
+    Strings are escaped.
+    None becomes SQL NULL.
+    Dates and datetimes are quoted.
     """
 
     if value is None:
@@ -493,16 +427,16 @@ def sql_string(value) -> str:
 
 
 def sql_insert(
-    table_name: str,
-    columns: list[str],
-    rows: list[tuple],
-) -> list[str]:
+    table_name,
+    columns,
+    rows,
+):
     """Generate one INSERT statement per row."""
 
-    if not rows:
-        return []
-
     statements = []
+
+    if not rows:
+        return statements
 
     column_sql = ", ".join(columns)
 
@@ -522,29 +456,6 @@ def sql_insert(
     return statements
 
 
-def choose_order_item_count() -> int:
-    """
-    Generate realistic order item counts.
-
-    Distribution:
-        15% -> 1 item
-        70% -> 2 items
-        15% -> 3 items
-
-    Expected average = 2 items/order.
-    """
-
-    probability = random.random()
-
-    if probability < 0.15:
-        return 1
-
-    if probability < 0.85:
-        return 2
-
-    return 3
-
-
 # ============================================================
 # CUSTOMERS
 # ============================================================
@@ -553,12 +464,7 @@ def generate_customers():
 
     customers = []
 
-    start_date = date(
-        2022,
-        1,
-        1,
-    )
-
+    start_date = date(2022, 1, 1)
     end_date = DATA_AS_OF.date()
 
     for customer_id in range(
@@ -582,7 +488,7 @@ def generate_customers():
             f"{first_name.lower()}."
             f"{last_name.lower()}."
             f"{customer_id}"
-            "@example.com"
+            f"@example.com"
         )
 
         phone = (
@@ -606,6 +512,8 @@ def generate_customers():
             LOCATIONS
         )
 
+        country = "India"
+
         customer_segment = random.choice(
             CUSTOMER_SEGMENTS
         )
@@ -625,12 +533,15 @@ def generate_customers():
         )
 
         max_update_datetime = min(
-            signup_datetime
-            + timedelta(days=365),
+            signup_datetime + timedelta(days=365),
             DATA_AS_OF,
         )
 
-        if max_update_datetime > signup_datetime:
+        if max_update_datetime == signup_datetime:
+
+            updated_at = signup_datetime
+
+        else:
 
             available_hours = int(
                 (
@@ -650,20 +561,13 @@ def generate_customers():
                 )
             )
 
-        else:
-
-            updated_at = signup_datetime
-
         ingested_at = add_hours_capped(
             updated_at,
             1,
             48,
         )
 
-        # ----------------------------------------------------
         # Controlled NULL scenario.
-        # ----------------------------------------------------
-
         if customer_id % 17 == 0:
             phone = None
 
@@ -677,7 +581,7 @@ def generate_customers():
                 date_of_birth,
                 city,
                 state,
-                "India",
+                country,
                 postal_code,
                 customer_segment,
                 customer_status,
@@ -745,18 +649,16 @@ def generate_products():
             )
         )
 
-        margin = Decimal(
-            str(
-                random.uniform(
-                    0.10,
-                    0.45,
-                )
-            )
+        margin = random.uniform(
+            0.10,
+            0.45,
         )
 
         selling_price = money(
             cost_price
-            * (Decimal("1.00") + margin)
+            * Decimal(
+                str(1 + margin)
+            )
         )
 
         stock_quantity = random.randint(
@@ -812,6 +714,27 @@ def generate_products():
             )
         )
 
+    # Controlled inconsistent-category scenario.
+    #
+    # This intentionally introduces casing inconsistency
+    # into RAW data so Silver can standardize it.
+    products[25] = (
+        products[25][0],
+        products[25][1],
+        products[25][2].lower(),
+        products[25][3],
+        products[25][4],
+        products[25][5],
+        products[25][6],
+        products[25][7],
+        products[25][8],
+        products[25][9],
+        products[25][10],
+        products[25][11],
+        products[25][12],
+        products[25][13],
+    )
+
     return products
 
 
@@ -831,6 +754,75 @@ def generate_orders():
 
     order_end_date = DATA_AS_OF.date()
 
+    # --------------------------------------------------------
+    # Shipment constraint
+    # --------------------------------------------------------
+    #
+    # We need at least SHIPMENT_COUNT eligible orders.
+    #
+    # Eligible order statuses:
+    #     Confirmed
+    #     Shipped
+    #     Delivered
+    #     Returned
+    #
+    # Non-eligible statuses:
+    #     Pending
+    #     Cancelled
+    #
+    # Because SHIPMENT_COUNT = 290 and ORDER_COUNT = 320,
+    # we explicitly guarantee at least 290 eligible orders.
+    #
+    # This avoids relying on random chance.
+    # --------------------------------------------------------
+
+    eligible_order_count = max(
+        SHIPMENT_COUNT,
+        ORDER_COUNT - 30,
+    )
+
+    eligible_status_pool = [
+        "Confirmed",
+        "Shipped",
+        "Delivered",
+        "Returned",
+    ]
+
+    non_eligible_status_pool = [
+        "Pending",
+        "Cancelled",
+    ]
+
+    # Start with guaranteed eligible statuses.
+    order_statuses = [
+        random.choice(
+            eligible_status_pool
+        )
+        for _ in range(
+            eligible_order_count
+        )
+    ]
+
+    # Remaining orders can be non-eligible.
+    remaining_orders = (
+        ORDER_COUNT
+        - eligible_order_count
+    )
+
+    order_statuses.extend(
+        random.choice(
+            non_eligible_status_pool
+        )
+        for _ in range(
+            remaining_orders
+        )
+    )
+
+    # Shuffle while preserving the guaranteed count.
+    random.shuffle(
+        order_statuses
+    )
+
     for order_id in range(
         1,
         ORDER_COUNT + 1,
@@ -846,55 +838,41 @@ def generate_orders():
             order_end_date,
         )
 
-        order_status = random.choices(
-            ORDER_STATUSES,
-            weights=[
-                5,      # Pending
-                10,     # Confirmed
-                10,     # Shipped
-                55,     # Delivered
-                8,      # Cancelled
-                12,     # Returned
-            ],
-        )[0]
+        order_status = order_statuses[
+            order_id - 1
+        ]
 
         # ----------------------------------------------------
-        # Payment state is derived from order state.
+        # Payment status should roughly reflect order state.
         # ----------------------------------------------------
 
         if order_status == "Cancelled":
 
-            payment_status = random.choices(
+            payment_status = random.choice(
                 [
                     "Failed",
                     "Refunded",
                     "Pending",
-                ],
-                weights=[
-                    50,
-                    30,
-                    20,
-                ],
-            )[0]
-
-        elif order_status == "Returned":
-
-            payment_status = "Refunded"
+                ]
+            )
 
         elif order_status == "Pending":
 
-            payment_status = random.choices(
+            payment_status = random.choice(
                 [
                     "Pending",
                     "Failed",
+                ]
+            )
+
+        elif order_status == "Returned":
+
+            payment_status = random.choice(
+                [
+                    "Refunded",
                     "Paid",
-                ],
-                weights=[
-                    50,
-                    30,
-                    20,
-                ],
-            )[0]
+                ]
+            )
 
         else:
 
@@ -963,7 +941,7 @@ def generate_orders():
                 "shipping_cost": shipping_cost,
                 "discount_amount": discount_amount,
                 "tax_amount": tax_amount,
-                "total_amount": Decimal("0.00"),
+                "total_amount": money(0),
                 "sales_channel": sales_channel,
                 "currency": CURRENCY,
                 "updated_at": updated_at,
@@ -971,13 +949,12 @@ def generate_orders():
             }
         )
 
-    # ========================================================
-    # CONTROLLED LATE-ARRIVING RECORD
-    # ========================================================
+    # --------------------------------------------------------
+    # Explicit late-arriving order
+    # --------------------------------------------------------
 
     late_order = orders[-1]
 
-    # Business event happened much earlier.
     late_order["order_date"] = datetime(
         2026,
         8,
@@ -987,7 +964,6 @@ def generate_orders():
         0,
     )
 
-    # Source record was updated much later.
     late_order["updated_at"] = datetime(
         2026,
         9,
@@ -997,7 +973,6 @@ def generate_orders():
         0,
     )
 
-    # Warehouse received it even later.
     late_order["ingested_at"] = datetime(
         2026,
         9,
@@ -1007,12 +982,13 @@ def generate_orders():
         0,
     )
 
+    # Ensure late-arriving order is shipment eligible.
     late_order["order_status"] = "Delivered"
     late_order["payment_status"] = "Paid"
 
-    # ========================================================
-    # CONTROLLED UPDATED-RECORD SCENARIO
-    # ========================================================
+    # --------------------------------------------------------
+    # Explicit updated-record scenario
+    # --------------------------------------------------------
 
     updated_order = orders[9]
 
@@ -1053,46 +1029,53 @@ def generate_order_items(
 
     order_item_id = 1001
 
+    # --------------------------------------------------------
+    # Group products by launch date eligibility.
+    # --------------------------------------------------------
+
     for order in orders:
 
-        item_count = choose_order_item_count()
-
-        # Only products already launched can be ordered.
         eligible_products = [
             product
             for product in products
-            if product[11]
-            <= order["order_date"].date()
+            if product[11] <= order["order_date"].date()
         ]
 
-        if len(eligible_products) < item_count:
+        if len(eligible_products) < MIN_ORDER_ITEMS:
 
             raise ValueError(
-                f"Not enough eligible products for "
+                f"No eligible products found for "
                 f"order {order['order_id']}."
             )
+
+        item_count = random.randint(
+            MIN_ORDER_ITEMS,
+            min(
+                MAX_ORDER_ITEMS,
+                len(eligible_products),
+            ),
+        )
 
         selected_products = random.sample(
             eligible_products,
             item_count,
         )
 
-        order_subtotal = Decimal("0.00")
+        order_subtotal = Decimal(
+            "0.00"
+        )
 
         for product in selected_products:
 
             product_id = product[0]
 
+            # product[7] = current selling price.
             current_selling_price = product[7]
 
-            # ------------------------------------------------
-            # Historical order price.
-            #
-            # The price actually paid can differ from the
-            # current product selling price.
-            # ------------------------------------------------
-
-            historical_factor = Decimal(
+            # Historical price is allowed to differ from the
+            # current product price because product prices can
+            # change over time.
+            historical_multiplier = Decimal(
                 str(
                     random.uniform(
                         0.90,
@@ -1103,7 +1086,7 @@ def generate_order_items(
 
             historical_price = money(
                 current_selling_price
-                * historical_factor
+                * historical_multiplier
             )
 
             quantity = random.randint(
@@ -1112,45 +1095,37 @@ def generate_order_items(
             )
 
             discount_amount = money(
-                historical_price
-                * quantity
-                * Decimal(
-                    str(
-                        random.uniform(
-                            0.00,
-                            0.15,
-                        )
-                    )
-                )
-            )
-
-            taxable_amount = (
-                historical_price
-                * quantity
-                - discount_amount
-            )
-
-            tax_rate = Decimal(
-                str(
-                    random.choice(
-                        [
-                            0.05,
-                            0.12,
-                            0.18,
-                        ]
-                    )
+                random.uniform(
+                    0,
+                    300,
                 )
             )
 
             tax_amount = money(
-                taxable_amount
-                * tax_rate
+                random.uniform(
+                    0,
+                    500,
+                )
+            )
+
+            # Prevent negative line totals.
+            base_amount = (
+                historical_price
+                * quantity
+            )
+
+            discount_amount = min(
+                discount_amount,
+                base_amount,
             )
 
             line_total = money(
-                taxable_amount
+                base_amount
+                - discount_amount
                 + tax_amount
             )
+
+            returned_quantity = 0
 
             updated_at = add_hours_capped(
                 order["updated_at"],
@@ -1174,7 +1149,7 @@ def generate_order_items(
                     "discount_amount": discount_amount,
                     "tax_amount": tax_amount,
                     "line_total": line_total,
-                    "returned_quantity": 0,
+                    "returned_quantity": returned_quantity,
                     "updated_at": updated_at,
                     "ingested_at": ingested_at,
                 }
@@ -1184,6 +1159,7 @@ def generate_order_items(
 
             order_item_id += 1
 
+        # Initially calculate the order total.
         order["total_amount"] = money(
             order_subtotal
             + order["shipping_cost"]
@@ -1191,34 +1167,69 @@ def generate_order_items(
             + order["tax_amount"]
         )
 
-        if order["total_amount"] < Decimal("0.00"):
-
-            order["total_amount"] = Decimal(
-                "0.00"
-            )
-
-    # ========================================================
-    # CONTROLLED DATA-QUALITY ISSUE #1
-    # ========================================================
+    # --------------------------------------------------------
+    # Controlled data-quality issue #1
+    # --------------------------------------------------------
     #
     # Negative quantity.
     #
-    # RAW intentionally contains this invalid value.
-    # ========================================================
+    # This is intentionally inserted into RAW so that the
+    # Silver layer can demonstrate data-quality handling.
+    # --------------------------------------------------------
 
-    order_items[20]["quantity"] = -1
+    if len(order_items) > 20:
 
-    # ========================================================
-    # CONTROLLED DATA-QUALITY ISSUE #2
-    # ========================================================
+        order_items[20]["quantity"] = -1
+
+    # --------------------------------------------------------
+    # Controlled data-quality issue #2
+    # --------------------------------------------------------
     #
     # Incorrect line total.
-    # ========================================================
+    #
+    # This allows reconciliation logic to detect an
+    # incorrect monetary value.
+    # --------------------------------------------------------
 
-    order_items[40]["line_total"] = money(
-        order_items[40]["line_total"]
-        + 500
-    )
+    if len(order_items) > 40:
+
+        order_items[40]["line_total"] = money(
+            order_items[40]["line_total"]
+            + 500
+        )
+
+    # --------------------------------------------------------
+    # Recalculate order totals from final RAW item values.
+    #
+    # This intentionally preserves the controlled bad line
+    # total, allowing downstream reconciliation to detect it.
+    # --------------------------------------------------------
+
+    totals = {}
+
+    for item in order_items:
+
+        order_id = item["order_id"]
+
+        totals.setdefault(
+            order_id,
+            Decimal("0.00"),
+        )
+
+        totals[order_id] += (
+            item["line_total"]
+        )
+
+    for order in orders:
+
+        order["total_amount"] = money(
+            totals[
+                order["order_id"]
+            ]
+            + order["shipping_cost"]
+            - order["discount_amount"]
+            + order["tax_amount"]
+        )
 
     return order_items
 
@@ -1235,9 +1246,9 @@ def generate_payments(orders):
 
     for order in orders:
 
-        payment_status = order[
-            "payment_status"
-        ]
+        payment_status = (
+            order["payment_status"]
+        )
 
         amount = money(
             order["total_amount"]
@@ -1296,6 +1307,17 @@ def generate_shipments(orders):
 
     shipment_id = 1
 
+    # --------------------------------------------------------
+    # Eligible orders:
+    #
+    # Confirmed
+    # Shipped
+    # Delivered
+    # Returned
+    #
+    # Pending and Cancelled orders are excluded.
+    # --------------------------------------------------------
+
     eligible_orders = [
         order
         for order in orders
@@ -1308,13 +1330,22 @@ def generate_shipments(orders):
         ]
     ]
 
+    # --------------------------------------------------------
+    # Safety check.
+    #
+    # generate_orders() guarantees this condition.
+    # --------------------------------------------------------
+
     if len(eligible_orders) < SHIPMENT_COUNT:
 
         raise ValueError(
-            "Not enough eligible orders to generate "
-            f"{SHIPMENT_COUNT} shipments."
+            f"Not enough eligible orders to generate "
+            f"{SHIPMENT_COUNT} shipments. "
+            f"Found {len(eligible_orders)} eligible "
+            f"orders out of {len(orders)}."
         )
 
+    # Exactly 290 unique orders receive shipments.
     selected_orders = random.sample(
         eligible_orders,
         SHIPMENT_COUNT,
@@ -1322,44 +1353,32 @@ def generate_shipments(orders):
 
     for order in selected_orders:
 
-        # ----------------------------------------------------
-        # Shipment state follows order state.
-        # ----------------------------------------------------
+        # Shipment occurs after the order.
+        shipped_at = add_days_capped(
+            order["order_date"],
+            1,
+            3,
+        )
 
-        if order["order_status"] == "Confirmed":
-
-            shipment_status = random.choice(
-                [
-                    "Processing",
-                    "Shipped",
-                    "In Transit",
-                ]
-            )
-
-        elif order["order_status"] == "Shipped":
-
-            shipment_status = random.choice(
-                [
-                    "Shipped",
-                    "In Transit",
-                    "Delayed",
-                ]
-            )
-
-        elif order["order_status"] in [
-            "Delivered",
-            "Returned",
-        ]:
-
-            shipment_status = "Delivered"
-
-        else:
-
-            shipment_status = "Processing"
+        # Generate shipment status.
+        #
+        # Status probabilities are weighted toward delivered
+        # shipments because most shipped e-commerce orders
+        # eventually arrive.
+        shipment_status = random.choices(
+            SHIPMENT_STATUSES,
+            weights=[
+                5,
+                10,
+                10,
+                55,
+                15,
+                5,
+            ],
+        )[0]
 
         # ----------------------------------------------------
-        # Processing:
-        # shipment has not physically shipped yet.
+        # Processing shipments should not have shipped_at.
         # ----------------------------------------------------
 
         if shipment_status == "Processing":
@@ -1367,37 +1386,40 @@ def generate_shipments(orders):
             shipped_at = None
             delivered_at = None
 
-            updated_base = order["order_date"]
+            updated_base = add_hours_capped(
+                order["order_date"],
+                1,
+                24,
+            )
+
+        # ----------------------------------------------------
+        # Cancelled shipments should not have delivery time.
+        # ----------------------------------------------------
+
+        elif shipment_status == "Cancelled":
+
+            delivered_at = None
+
+            updated_base = shipped_at
+
+        # ----------------------------------------------------
+        # Delivered shipments require delivered_at.
+        # ----------------------------------------------------
+
+        elif shipment_status == "Delivered":
+
+            delivered_at = add_days_capped(
+                shipped_at,
+                1,
+                7,
+            )
+
+            updated_base = delivered_at
 
         else:
 
-            shipped_at = add_days_capped(
-                order["order_date"],
-                1,
-                3,
-            )
-
-            if shipment_status == "Delivered":
-
-                delivered_at = add_days_capped(
-                    shipped_at,
-                    1,
-                    7,
-                )
-
-            else:
-
-                delivered_at = None
-
-            updated_base = (
-                delivered_at
-                if delivered_at is not None
-                else shipped_at
-            )
-
-        city, state, _ = random.choice(
-            LOCATIONS
-        )
+            delivered_at = None
+            updated_base = shipped_at
 
         updated_at = add_hours_capped(
             updated_base,
@@ -1409,6 +1431,10 @@ def generate_shipments(orders):
             updated_at,
             1,
             24,
+        )
+
+        city, state, _ = random.choice(
+            LOCATIONS
         )
 
         shipments.append(
@@ -1435,37 +1461,20 @@ def generate_shipments(orders):
 # RETURNS
 # ============================================================
 
-def generate_returns(
-    order_items,
-    orders,
-):
+def generate_returns(order_items):
 
     returns = []
 
-    order_lookup = {
-        order["order_id"]: order
-        for order in orders
-    }
-
-    # Returns are normally possible only for completed/
-    # delivered customer orders.
     eligible_items = [
         item
         for item in order_items
         if item["quantity"] > 0
-        and order_lookup[
-            item["order_id"]
-        ]["order_status"]
-        in [
-            "Delivered",
-            "Returned",
-        ]
     ]
 
     if len(eligible_items) < RETURN_COUNT:
 
         raise ValueError(
-            "Not enough eligible order items to generate "
+            f"Not enough eligible order items to generate "
             f"{RETURN_COUNT} returns."
         )
 
@@ -1473,8 +1482,6 @@ def generate_returns(
         eligible_items,
         RETURN_COUNT,
     )
-
-    return_records = []
 
     return_id = 1
 
@@ -1496,15 +1503,9 @@ def generate_returns(
             * return_quantity
         )
 
-        return_status = random.choices(
-            RETURN_STATUSES,
-            weights=[
-                15,     # Requested
-                25,     # Approved
-                50,     # Completed
-                10,     # Rejected
-            ],
-        )[0]
+        return_status = random.choice(
+            RETURN_STATUSES
+        )
 
         updated_at = add_hours_capped(
             return_date,
@@ -1518,145 +1519,36 @@ def generate_returns(
             24,
         )
 
-        return_records.append(
-            {
-                "return_id": return_id,
-                "order_item_id": item[
-                    "order_item_id"
-                ],
-                "return_date": return_date,
-                "return_reason": random.choice(
+        returns.append(
+            (
+                return_id,
+                item["order_item_id"],
+                return_date,
+                random.choice(
                     RETURN_REASONS
                 ),
-                "return_quantity": return_quantity,
-                "refund_amount": refund_amount,
-                "return_status": return_status,
-                "updated_at": updated_at,
-                "ingested_at": ingested_at,
-            }
+                return_quantity,
+                refund_amount,
+                return_status,
+                updated_at,
+                ingested_at,
+            )
         )
 
-        # Keep order_items.returned_quantity consistent
-        # with the generated return.
-        item["returned_quantity"] += (
-            return_quantity
+        # Keep order_items.returned_quantity consistent with
+        # generated return records.
+        item["returned_quantity"] = (
+            item["returned_quantity"]
+            + return_quantity
         )
 
         return_id += 1
 
-    return return_records
+    return returns
 
 
 # ============================================================
-# CONTROLLED DATA-QUALITY SCENARIOS
-# ============================================================
-
-def apply_controlled_data_quality_issues(
-    customers,
-    products,
-    order_items,
-):
-    """
-    Apply intentional RAW-layer quality issues.
-
-    These are deliberately introduced so that later dbt
-    Bronze/Silver models can demonstrate cleansing and
-    validation.
-
-    Issues:
-        1. NULL phone
-        2. inconsistent category casing
-        3. negative quantity
-        4. incorrect line total
-    """
-
-    # --------------------------------------------------------
-    # 1. NULL phone
-    # --------------------------------------------------------
-
-    customer_index = 16
-
-    customer = customers[
-        customer_index
-    ]
-
-    customers[
-        customer_index
-    ] = (
-        customer[0],
-        customer[1],
-        customer[2],
-        None,
-        customer[4],
-        customer[5],
-        customer[6],
-        customer[7],
-        customer[8],
-        customer[9],
-        customer[10],
-        customer[11],
-        customer[12],
-        customer[13],
-        customer[14],
-    )
-
-    # --------------------------------------------------------
-    # 2. Inconsistent category casing.
-    #
-    # Example:
-    #
-    #     Electronics
-    #
-    # becomes:
-    #
-    #     electronics
-    #
-    # Silver can standardize this later.
-    # --------------------------------------------------------
-
-    product_index = 25
-
-    product = products[
-        product_index
-    ]
-
-    products[
-        product_index
-    ] = (
-        product[0],
-        product[1],
-        product[2].lower(),
-        product[3],
-        product[4],
-        product[5],
-        product[6],
-        product[7],
-        product[8],
-        product[9],
-        product[10],
-        product[11],
-        product[12],
-        product[13],
-    )
-
-    # --------------------------------------------------------
-    # 3. Negative quantity.
-    # --------------------------------------------------------
-
-    order_items[20]["quantity"] = -1
-
-    # --------------------------------------------------------
-    # 4. Incorrect line total.
-    # --------------------------------------------------------
-
-    order_items[40]["line_total"] = money(
-        order_items[40]["line_total"]
-        + 500
-    )
-
-
-# ============================================================
-# BUSINESS RELATIONSHIP VALIDATION
+# RELATIONSHIP VALIDATION
 # ============================================================
 
 def validate_relationships(
@@ -1669,12 +1561,12 @@ def validate_relationships(
     returns,
 ):
     """
-    Validate primary-key and foreign-key style relationships
-    before generating SQL.
+    Validate important source relationships before SQL
+    generation.
     """
 
     print("\nRelationship validation:")
-    print("-" * 60)
+    print("-" * 55)
 
     customer_ids = {
         customer[0]
@@ -1698,10 +1590,7 @@ def validate_relationships(
 
     violations = []
 
-    # --------------------------------------------------------
     # Orders -> Customers
-    # --------------------------------------------------------
-
     for order in orders:
 
         if order["customer_id"] not in customer_ids:
@@ -1712,34 +1601,29 @@ def validate_relationships(
                 f"{order['customer_id']}"
             )
 
-    # --------------------------------------------------------
-    # Order Items -> Orders / Products
-    # --------------------------------------------------------
-
+    # Order items -> Orders
     for item in order_items:
 
         if item["order_id"] not in order_ids:
 
             violations.append(
-                f"order_item "
-                f"{item['order_item_id']} "
+                f"order_item {item['order_item_id']} "
                 f"references missing order "
                 f"{item['order_id']}"
             )
 
+    # Order items -> Products
+    for item in order_items:
+
         if item["product_id"] not in product_ids:
 
             violations.append(
-                f"order_item "
-                f"{item['order_item_id']} "
+                f"order_item {item['order_item_id']} "
                 f"references missing product "
                 f"{item['product_id']}"
             )
 
-    # --------------------------------------------------------
     # Payments -> Orders
-    # --------------------------------------------------------
-
     for payment in payments:
 
         if payment[1] not in order_ids:
@@ -1750,10 +1634,7 @@ def validate_relationships(
                 f"{payment[1]}"
             )
 
-    # --------------------------------------------------------
     # Shipments -> Orders
-    # --------------------------------------------------------
-
     for shipment in shipments:
 
         if shipment[1] not in order_ids:
@@ -1764,29 +1645,47 @@ def validate_relationships(
                 f"{shipment[1]}"
             )
 
-    # --------------------------------------------------------
-    # Returns -> Order Items
-    # --------------------------------------------------------
-
+    # Returns -> Order items
     for return_record in returns:
 
-        if (
-            return_record["order_item_id"]
-            not in order_item_ids
-        ):
+        if return_record[1] not in order_item_ids:
 
             violations.append(
-                f"return "
-                f"{return_record['return_id']} "
-                f"references missing order_item "
-                f"{return_record['order_item_id']}"
+                f"return {return_record[0]} "
+                f"references missing order item "
+                f"{return_record[1]}"
             )
+
+    # Primary-key uniqueness checks.
+    if len(customer_ids) != len(customers):
+
+        violations.append(
+            "Duplicate customer_id detected."
+        )
+
+    if len(product_ids) != len(products):
+
+        violations.append(
+            "Duplicate product_id detected."
+        )
+
+    if len(order_ids) != len(orders):
+
+        violations.append(
+            "Duplicate order_id detected."
+        )
+
+    if len(order_item_ids) != len(order_items):
+
+        violations.append(
+            "Duplicate order_item_id detected."
+        )
 
     if violations:
 
         print(
             f"FAILED: {len(violations)} "
-            "relationship violations found."
+            f"relationship violations found."
         )
 
         for violation in violations[:20]:
@@ -1800,7 +1699,170 @@ def validate_relationships(
         )
 
     print(
-        "All foreign-key style relationships are valid."
+        "All primary-key and foreign-key-like "
+        "relationships passed."
+    )
+
+
+# ============================================================
+# COUNT VALIDATION
+# ============================================================
+
+def validate_counts(
+    customers,
+    products,
+    orders,
+    order_items,
+    payments,
+    shipments,
+    returns,
+):
+    """Validate expected record counts."""
+
+    print("\nRecord-count validation:")
+    print("-" * 55)
+
+    checks = [
+        (
+            "customers",
+            len(customers),
+            CUSTOMER_COUNT,
+        ),
+        (
+            "products",
+            len(products),
+            PRODUCT_COUNT,
+        ),
+        (
+            "orders",
+            len(orders),
+            ORDER_COUNT,
+        ),
+        (
+            "order_items",
+            len(order_items),
+            ORDER_COUNT,
+        ),
+        (
+            "payments",
+            len(payments),
+            PAYMENT_COUNT,
+        ),
+        (
+            "shipments",
+            len(shipments),
+            280,
+        ),
+        (
+            "returns",
+            len(returns),
+            20,
+        ),
+    ]
+
+    for table_name, actual, minimum in checks:
+
+        if table_name == "shipments":
+
+            valid = 280 <= actual <= 300
+
+            expected_text = "280-300"
+
+        elif table_name == "returns":
+
+            valid = 20 <= actual <= 40
+
+            expected_text = "20-40"
+
+        else:
+
+            valid = actual >= minimum
+
+            expected_text = str(minimum)
+
+        print(
+            f"{table_name:<15}"
+            f" actual={actual:<4}"
+            f" expected={expected_text}"
+        )
+
+        if not valid:
+
+            raise ValueError(
+                f"Invalid count for {table_name}: "
+                f"{actual}"
+            )
+
+    print("-" * 55)
+    print("Record-count validation passed.")
+
+
+# ============================================================
+# DATA QUALITY SUMMARY
+# ============================================================
+
+def print_data_quality_summary(
+    customers,
+    products,
+    orders,
+    order_items,
+    payments,
+    shipments,
+    returns,
+):
+    """Print intentional RAW data-quality scenarios."""
+
+    print("\nControlled RAW data-quality scenarios:")
+    print("-" * 55)
+
+    null_phone_count = sum(
+        1
+        for customer in customers
+        if customer[3] is None
+    )
+
+    inconsistent_category_count = sum(
+        1
+        for product in products
+        if product[2]
+        != product[2].title()
+    )
+
+    negative_quantity_count = sum(
+        1
+        for item in order_items
+        if item["quantity"] < 0
+    )
+
+    print(
+        f"NULL customer phones       : "
+        f"{null_phone_count}"
+    )
+
+    print(
+        f"Inconsistent categories    : "
+        f"{inconsistent_category_count}"
+    )
+
+    print(
+        f"Negative quantities        : "
+        f"{negative_quantity_count}"
+    )
+
+    print(
+        f"Late-arriving order        : "
+        f"order_id={orders[-1]['order_id']}"
+    )
+
+    print(
+        "Updated order              : "
+        f"order_id={orders[9]['order_id']}"
+    )
+
+    print(
+        "Incorrect line total       : "
+        "order_item_id="
+        f"{order_items[40]['order_item_id']}"
     )
 
 
@@ -1818,22 +1880,19 @@ def validate_timestamps(
     returns,
 ):
     """
-    Validate timestamp rules.
+    Validate that generated timestamps do not exceed
+    DATA_AS_OF.
 
-    General rule:
+    Also validate basic timestamp ordering:
 
         event
           <= updated_at
           <= ingested_at
           <= DATA_AS_OF
-
-    Shipment Processing records may have:
-        shipped_at = NULL
-        delivered_at = NULL
     """
 
     print("\nTimestamp validation:")
-    print("-" * 60)
+    print("-" * 55)
 
     violations = []
 
@@ -1852,13 +1911,6 @@ def validate_timestamps(
             datetime.min.time(),
         )
 
-        if updated_at < signup_datetime:
-
-            violations.append(
-                f"customer {customer[0]} "
-                f"updated_at < signup_date"
-            )
-
         if updated_at > DATA_AS_OF:
 
             violations.append(
@@ -1871,6 +1923,13 @@ def validate_timestamps(
             violations.append(
                 f"customer {customer[0]} "
                 f"ingested_at > DATA_AS_OF"
+            )
+
+        if updated_at < signup_datetime:
+
+            violations.append(
+                f"customer {customer[0]} "
+                f"updated_at < signup_date"
             )
 
         if ingested_at < updated_at:
@@ -1895,13 +1954,6 @@ def validate_timestamps(
             datetime.min.time(),
         )
 
-        if updated_at < launch_datetime:
-
-            violations.append(
-                f"product {product[0]} "
-                f"updated_at < launch_date"
-            )
-
         if updated_at > DATA_AS_OF:
 
             violations.append(
@@ -1914,6 +1966,13 @@ def validate_timestamps(
             violations.append(
                 f"product {product[0]} "
                 f"ingested_at > DATA_AS_OF"
+            )
+
+        if updated_at < launch_datetime:
+
+            violations.append(
+                f"product {product[0]} "
+                f"updated_at < launch_date"
             )
 
         if ingested_at < updated_at:
@@ -2057,20 +2116,14 @@ def validate_timestamps(
         updated_at = shipment[8]
         ingested_at = shipment[9]
 
-        if (
-            shipped_at is not None
-            and shipped_at > DATA_AS_OF
-        ):
+        if shipped_at and shipped_at > DATA_AS_OF:
 
             violations.append(
                 f"shipment {shipment[0]} "
                 f"shipped_at > DATA_AS_OF"
             )
 
-        if (
-            delivered_at is not None
-            and delivered_at > DATA_AS_OF
-        ):
+        if delivered_at and delivered_at > DATA_AS_OF:
 
             violations.append(
                 f"shipment {shipment[0]} "
@@ -2092,8 +2145,8 @@ def validate_timestamps(
             )
 
         if (
-            shipped_at is not None
-            and delivered_at is not None
+            shipped_at
+            and delivered_at
             and delivered_at < shipped_at
         ):
 
@@ -2103,7 +2156,7 @@ def validate_timestamps(
             )
 
         if (
-            shipped_at is not None
+            shipped_at
             and updated_at < shipped_at
         ):
 
@@ -2125,47 +2178,42 @@ def validate_timestamps(
 
     for return_record in returns:
 
-        return_date = return_record["return_date"]
-        updated_at = return_record["updated_at"]
-        ingested_at = return_record["ingested_at"]
+        return_date = return_record[2]
+        updated_at = return_record[7]
+        ingested_at = return_record[8]
 
         if return_date > DATA_AS_OF:
 
             violations.append(
-                f"return "
-                f"{return_record['return_id']} "
+                f"return {return_record[0]} "
                 f"return_date > DATA_AS_OF"
             )
 
         if updated_at > DATA_AS_OF:
 
             violations.append(
-                f"return "
-                f"{return_record['return_id']} "
+                f"return {return_record[0]} "
                 f"updated_at > DATA_AS_OF"
             )
 
         if ingested_at > DATA_AS_OF:
 
             violations.append(
-                f"return "
-                f"{return_record['return_id']} "
+                f"return {return_record[0]} "
                 f"ingested_at > DATA_AS_OF"
             )
 
         if updated_at < return_date:
 
             violations.append(
-                f"return "
-                f"{return_record['return_id']} "
+                f"return {return_record[0]} "
                 f"updated_at < return_date"
             )
 
         if ingested_at < updated_at:
 
             violations.append(
-                f"return "
-                f"{return_record['return_id']} "
+                f"return {return_record[0]} "
                 f"ingested_at < updated_at"
             )
 
@@ -2173,7 +2221,7 @@ def validate_timestamps(
 
         print(
             f"FAILED: {len(violations)} "
-            "timestamp violations found."
+            f"timestamp violations found."
         )
 
         for violation in violations[:20]:
@@ -2187,207 +2235,12 @@ def validate_timestamps(
         )
 
     print(
-        "All timestamp validations passed."
-    )
-
-
-# ============================================================
-# RECORD COUNT VALIDATION
-# ============================================================
-
-def validate_counts(
-    customers,
-    products,
-    orders,
-    order_items,
-    payments,
-    shipments,
-    returns,
-):
-    """Validate generated record counts."""
-
-    print("\nRecord-count validation:")
-    print("-" * 60)
-
-    if len(customers) != CUSTOMER_COUNT:
-
-        raise ValueError(
-            f"Expected {CUSTOMER_COUNT} customers, "
-            f"got {len(customers)}."
-        )
-
-    if len(products) != PRODUCT_COUNT:
-
-        raise ValueError(
-            f"Expected {PRODUCT_COUNT} products, "
-            f"got {len(products)}."
-        )
-
-    if len(orders) != ORDER_COUNT:
-
-        raise ValueError(
-            f"Expected {ORDER_COUNT} orders, "
-            f"got {len(orders)}."
-        )
-
-    if len(order_items) < ORDER_COUNT:
-
-        raise ValueError(
-            "Every order must contain at least "
-            "one order item."
-        )
-
-    if len(payments) != PAYMENT_COUNT:
-
-        raise ValueError(
-            f"Expected {PAYMENT_COUNT} payments, "
-            f"got {len(payments)}."
-        )
-
-    if not (
-        280
-        <= len(shipments)
-        <= 300
-    ):
-
-        raise ValueError(
-            "Expected shipments between 280 and 300."
-        )
-
-    if not (
-        20
-        <= len(returns)
-        <= 40
-    ):
-
-        raise ValueError(
-            "Expected returns between 20 and 40."
-        )
-
-    # One payment per order in this educational dataset.
-    payment_order_ids = {
-        payment[1]
-        for payment in payments
-    }
-
-    order_ids = {
-        order["order_id"]
-        for order in orders
-    }
-
-    if payment_order_ids != order_ids:
-
-        raise ValueError(
-            "Payments do not contain exactly one "
-            "payment record for every order."
-        )
-
-    print(
-        f"customers    = {len(customers)}"
+        f"All timestamps are <= "
+        f"{DATA_AS_OF}."
     )
 
     print(
-        f"products     = {len(products)}"
-    )
-
-    print(
-        f"orders       = {len(orders)}"
-    )
-
-    print(
-        f"order_items  = {len(order_items)}"
-    )
-
-    print(
-        f"items/order  = "
-        f"{len(order_items) / len(orders):.2f}"
-    )
-
-    print(
-        f"payments     = {len(payments)}"
-    )
-
-    print(
-        f"shipments    = {len(shipments)}"
-    )
-
-    print(
-        f"returns      = {len(returns)}"
-    )
-
-    print(
-        "\nRecord-count validation passed."
-    )
-
-
-# ============================================================
-# DATA QUALITY SUMMARY
-# ============================================================
-
-def print_data_quality_summary(
-    customers,
-    products,
-    orders,
-    order_items,
-):
-    """Print summary of intentional RAW data-quality issues."""
-
-    print(
-        "\nControlled RAW data-quality scenarios:"
-    )
-
-    print("-" * 60)
-
-    null_phone_count = sum(
-        1
-        for customer in customers
-        if customer[3] is None
-    )
-
-    negative_quantity_count = sum(
-        1
-        for item in order_items
-        if item["quantity"] < 0
-    )
-
-    inconsistent_category_count = sum(
-        1
-        for product in products
-        if product[2]
-        and product[2] != product[2].title()
-    )
-
-    late_order_count = sum(
-        1
-        for order in orders
-        if (
-            order["ingested_at"]
-            - order["order_date"]
-        ).days >= 7
-    )
-
-    print(
-        f"NULL customer phones    : "
-        f"{null_phone_count}"
-    )
-
-    print(
-        f"Negative quantities     : "
-        f"{negative_quantity_count}"
-    )
-
-    print(
-        f"Inconsistent categories : "
-        f"{inconsistent_category_count}"
-    )
-
-    print(
-        f"Late-arriving orders    : "
-        f"{late_order_count}"
-    )
-
-    print(
-        "Incorrect line totals   : 1"
+        "Timestamp ordering validation passed."
     )
 
 
@@ -2419,18 +2272,12 @@ def generate_sql(
     )
 
     sql.append(
-        f"-- Random seed: {RANDOM_SEED}\n"
-        f"-- Data as of: {DATA_AS_OF}\n"
-    )
-
-    sql.append(
-        "-- WARNING: This resets the RAW tables before loading.\n"
+        "-- WARNING: This resets the RAW tables before loading\n"
+        "-- the generated dataset.\n"
     )
 
     # --------------------------------------------------------
-    # Reset RAW tables.
-    #
-    # CASCADE handles the foreign-key relationships.
+    # Reset RAW tables
     # --------------------------------------------------------
 
     sql.append(
@@ -2445,9 +2292,9 @@ def generate_sql(
         "RESTART IDENTITY CASCADE;\n"
     )
 
-    # ========================================================
-    # CUSTOMERS
-    # ========================================================
+    # --------------------------------------------------------
+    # Customers
+    # --------------------------------------------------------
 
     customer_columns = [
         "customer_id",
@@ -2473,13 +2320,11 @@ def generate_sql(
         customers,
     )
 
-    sql.extend(
-        customer_sql
-    )
+    sql.extend(customer_sql)
 
-    # ========================================================
-    # PRODUCTS
-    # ========================================================
+    # --------------------------------------------------------
+    # Products
+    # --------------------------------------------------------
 
     product_columns = [
         "product_id",
@@ -2504,13 +2349,11 @@ def generate_sql(
         products,
     )
 
-    sql.extend(
-        product_sql
-    )
+    sql.extend(product_sql)
 
-    # ========================================================
-    # ORDERS
-    # ========================================================
+    # --------------------------------------------------------
+    # Orders
+    # --------------------------------------------------------
 
     order_columns = [
         "order_id",
@@ -2555,13 +2398,11 @@ def generate_sql(
         order_rows,
     )
 
-    sql.extend(
-        order_sql
-    )
+    sql.extend(order_sql)
 
-    # ========================================================
-    # ORDER ITEMS
-    # ========================================================
+    # --------------------------------------------------------
+    # Order Items
+    # --------------------------------------------------------
 
     order_item_columns = [
         "order_item_id",
@@ -2600,13 +2441,11 @@ def generate_sql(
         order_item_rows,
     )
 
-    sql.extend(
-        order_item_sql
-    )
+    sql.extend(order_item_sql)
 
-    # ========================================================
-    # PAYMENTS
-    # ========================================================
+    # --------------------------------------------------------
+    # Payments
+    # --------------------------------------------------------
 
     payment_columns = [
         "payment_id",
@@ -2626,13 +2465,11 @@ def generate_sql(
         payments,
     )
 
-    sql.extend(
-        payment_sql
-    )
+    sql.extend(payment_sql)
 
-    # ========================================================
-    # SHIPMENTS
-    # ========================================================
+    # --------------------------------------------------------
+    # Shipments
+    # --------------------------------------------------------
 
     shipment_columns = [
         "shipment_id",
@@ -2653,13 +2490,11 @@ def generate_sql(
         shipments,
     )
 
-    sql.extend(
-        shipment_sql
-    )
+    sql.extend(shipment_sql)
 
-    # ========================================================
-    # RETURNS
-    # ========================================================
+    # --------------------------------------------------------
+    # Returns
+    # --------------------------------------------------------
 
     return_columns = [
         "return_id",
@@ -2673,33 +2508,26 @@ def generate_sql(
         "ingested_at",
     ]
 
-    return_rows = [
-        (
-            record["return_id"],
-            record["order_item_id"],
-            record["return_date"],
-            record["return_reason"],
-            record["return_quantity"],
-            record["refund_amount"],
-            record["return_status"],
-            record["updated_at"],
-            record["ingested_at"],
-        )
-        for record in returns
-    ]
-
     return_sql = sql_insert(
         "returns",
         return_columns,
-        return_rows,
+        returns,
     )
 
-    sql.extend(
-        return_sql
+    sql.extend(return_sql)
+
+    # --------------------------------------------------------
+    # Footer
+    # --------------------------------------------------------
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- END OF GENERATED DATA\n"
+        "-- =====================================================\n"
     )
 
     # --------------------------------------------------------
-    # SQL generation validation.
+    # SQL generation validation
     # --------------------------------------------------------
 
     expected_counts = {
@@ -2722,11 +2550,8 @@ def generate_sql(
         "returns": len(return_sql),
     }
 
-    print(
-        "\nSQL generation validation:"
-    )
-
-    print("-" * 60)
+    print("\nSQL generation validation:")
+    print("-" * 55)
 
     for table_name in expected_counts:
 
@@ -2740,23 +2565,24 @@ def generate_sql(
 
         print(
             f"{table_name:<15}"
-            f" expected={expected:<5}"
-            f" generated={actual:<5}"
+            f" expected={expected:<4}"
+            f" generated={actual:<4}"
         )
 
         if expected != actual:
 
             raise ValueError(
                 f"SQL generation failed for "
-                f"{table_name}: expected "
-                f"{expected} INSERT statements, "
+                f"{table_name}: "
+                f"expected {expected} INSERT statements, "
                 f"but generated {actual}."
             )
 
-    print("-" * 60)
+    print("-" * 55)
 
     print(
-        "SQL generation validation passed."
+        f"Total SQL statements generated: "
+        f"{len(sql)}"
     )
 
     return "\n".join(sql)
@@ -2769,88 +2595,63 @@ def generate_sql(
 def main():
 
     print("=" * 60)
-    print(
-        "E-COMMERCE RAW DATA GENERATOR"
-    )
+    print("E-COMMERCE RAW DATA GENERATOR")
     print("=" * 60)
 
     print(
-        f"\nData as of: {DATA_AS_OF}"
+        f"\nData as of: "
+        f"{DATA_AS_OF}"
     )
 
     print(
-        f"Random seed: {RANDOM_SEED}"
+        f"Random seed: "
+        f"{RANDOM_SEED}"
     )
 
-    # ========================================================
-    # GENERATE SOURCE DATASETS
-    # ========================================================
+    # --------------------------------------------------------
+    # Generate source datasets
+    # --------------------------------------------------------
 
-    print(
-        "\nGenerating customers..."
-    )
+    print("\nGenerating customers...")
 
     customers = generate_customers()
 
-    print(
-        "Generating products..."
-    )
+    print("Generating products...")
 
     products = generate_products()
 
-    print(
-        "Generating orders..."
-    )
+    print("Generating orders...")
 
     orders = generate_orders()
 
-    print(
-        "Generating order items..."
-    )
+    print("Generating order items...")
 
     order_items = generate_order_items(
         orders,
         products,
     )
 
-    print(
-        "Generating payments..."
-    )
+    print("Generating payments...")
 
     payments = generate_payments(
         orders
     )
 
-    print(
-        "Generating shipments..."
-    )
+    print("Generating shipments...")
 
     shipments = generate_shipments(
         orders
     )
 
-    print(
-        "Generating returns..."
-    )
+    print("Generating returns...")
 
     returns = generate_returns(
-        order_items,
-        orders,
+        order_items
     )
 
-    # ========================================================
-    # APPLY CONTROLLED DATA QUALITY ISSUES
-    # ========================================================
-
-    apply_controlled_data_quality_issues(
-        customers,
-        products,
-        order_items,
-    )
-
-    # ========================================================
-    # VALIDATE COUNTS
-    # ========================================================
+    # --------------------------------------------------------
+    # Validate counts
+    # --------------------------------------------------------
 
     validate_counts(
         customers,
@@ -2862,9 +2663,9 @@ def main():
         returns,
     )
 
-    # ========================================================
-    # VALIDATE RELATIONSHIPS
-    # ========================================================
+    # --------------------------------------------------------
+    # Validate relationships
+    # --------------------------------------------------------
 
     validate_relationships(
         customers,
@@ -2876,9 +2677,9 @@ def main():
         returns,
     )
 
-    # ========================================================
-    # VALIDATE TIMESTAMPS
-    # ========================================================
+    # --------------------------------------------------------
+    # Validate timestamps
+    # --------------------------------------------------------
 
     validate_timestamps(
         customers,
@@ -2890,20 +2691,23 @@ def main():
         returns,
     )
 
-    # ========================================================
-    # PRINT DATA QUALITY SUMMARY
-    # ========================================================
+    # --------------------------------------------------------
+    # Print intentional data-quality scenarios
+    # --------------------------------------------------------
 
     print_data_quality_summary(
         customers,
         products,
         orders,
         order_items,
+        payments,
+        shipments,
+        returns,
     )
 
-    # ========================================================
-    # GENERATE SQL
-    # ========================================================
+    # --------------------------------------------------------
+    # Generate SQL
+    # --------------------------------------------------------
 
     sql = generate_sql(
         customers,
@@ -2915,9 +2719,9 @@ def main():
         returns,
     )
 
-    # ========================================================
-    # WRITE SQL FILE
-    # ========================================================
+    # --------------------------------------------------------
+    # Write SQL file
+    # --------------------------------------------------------
 
     OUTPUT_FILE.parent.mkdir(
         parents=True,
@@ -2929,48 +2733,47 @@ def main():
         encoding="utf-8",
     )
 
-    # ========================================================
-    # FINAL OUTPUT
-    # ========================================================
+    # --------------------------------------------------------
+    # Final output
+    # --------------------------------------------------------
+
+    print("\n" + "=" * 60)
+    print("DATA GENERATION COMPLETE")
+    print("=" * 60)
 
     print(
-        "\n" + "=" * 60
+        f"\nCustomers   : "
+        f"{len(customers)}"
     )
 
     print(
-        "DATA GENERATION COMPLETE"
+        f"Products    : "
+        f"{len(products)}"
     )
 
     print(
-        "=" * 60
+        f"Orders      : "
+        f"{len(orders)}"
     )
 
     print(
-        f"\nCustomers   : {len(customers)}"
+        f"Order Items : "
+        f"{len(order_items)}"
     )
 
     print(
-        f"Products    : {len(products)}"
+        f"Payments    : "
+        f"{len(payments)}"
     )
 
     print(
-        f"Orders      : {len(orders)}"
+        f"Shipments   : "
+        f"{len(shipments)}"
     )
 
     print(
-        f"Order Items : {len(order_items)}"
-    )
-
-    print(
-        f"Payments    : {len(payments)}"
-    )
-
-    print(
-        f"Shipments   : {len(shipments)}"
-    )
-
-    print(
-        f"Returns     : {len(returns)}"
+        f"Returns     : "
+        f"{len(returns)}"
     )
 
     print(
@@ -2999,7 +2802,7 @@ def main():
 
     print(
         "\nThe generated SQL is ready "
-        "to be loaded into PostgreSQL."
+        "to be validated before loading."
     )
 
 
