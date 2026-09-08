@@ -13,16 +13,28 @@ The generated SQL loads:
     - shipments
     - returns
 
+Target record counts:
+    - customers   = 120
+    - products    = 500
+    - orders      = 320
+    - order_items = approximately 600
+    - payments    = 320
+    - shipments   = 280-300
+    - returns     = 20-40
+
 The data includes:
     - different business dates
     - different ingestion batches
     - realistic relationships
     - historical product prices
-    - payment attempts
+    - payment states
     - shipment states
     - returns
-    - late-arriving records
-    - controlled data-quality scenarios
+    - late-arriving data
+    - updated records
+    - NULL values
+    - controlled data-quality issues
+    - reproducible data using a fixed random seed
 
 This script uses only Python standard-library modules.
 """
@@ -33,12 +45,17 @@ from pathlib import Path
 import random
 
 
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
 RANDOM_SEED = 42
 
 CUSTOMER_COUNT = 120
 PRODUCT_COUNT = 500
 ORDER_COUNT = 320
 
+# 1-3 items per order gives approximately 600+ items.
 MIN_ORDER_ITEMS = 1
 MAX_ORDER_ITEMS = 3
 
@@ -46,9 +63,23 @@ PAYMENT_COUNT = 320
 SHIPMENT_COUNT = 290
 RETURN_COUNT = 30
 
-OUTPUT_FILE = Path(__file__).resolve().parent.parent / "sql" / "03_insert_raw_data.sql"
+OUTPUT_FILE = (
+    Path(__file__).resolve().parent.parent
+    / "sql"
+    / "03_insert_raw_data.sql"
+)
+
+
+# ============================================================
+# RANDOM GENERATOR
+# ============================================================
 
 random.seed(RANDOM_SEED)
+
+
+# ============================================================
+# REFERENCE DATA
+# ============================================================
 
 FIRST_NAMES = [
     "Aarav",
@@ -223,6 +254,11 @@ RETURN_STATUSES = [
 
 CURRENCY = "INR"
 
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
 def random_date(start_date: date, end_date: date) -> date:
     """Return a random date between start_date and end_date."""
 
@@ -233,10 +269,16 @@ def random_date(start_date: date, end_date: date) -> date:
     )
 
 
-def random_datetime(start_date: date, end_date: date) -> datetime:
+def random_datetime(
+    start_date: date,
+    end_date: date,
+) -> datetime:
     """Return a random datetime between two dates."""
 
-    selected_date = random_date(start_date, end_date)
+    selected_date = random_date(
+        start_date,
+        end_date,
+    )
 
     hour = random.randint(8, 21)
     minute = random.randint(0, 59)
@@ -253,7 +295,7 @@ def random_datetime(start_date: date, end_date: date) -> datetime:
 
 
 def money(value) -> Decimal:
-    """Convert a value to two-decimal monetary value."""
+    """Convert a value to a two-decimal monetary value."""
 
     return Decimal(str(value)).quantize(
         Decimal("0.01"),
@@ -287,8 +329,12 @@ def sql_string(value):
     return f"'{value}'"
 
 
-def sql_insert(table_name, columns, rows):
-    """Generate INSERT statements for a table."""
+def sql_insert(
+    table_name,
+    columns,
+    rows,
+):
+    """Generate one SQL INSERT statement per row."""
 
     statements = []
 
@@ -298,6 +344,7 @@ def sql_insert(table_name, columns, rows):
     column_sql = ", ".join(columns)
 
     for row in rows:
+
         values = ", ".join(
             sql_string(value)
             for value in row
@@ -311,18 +358,28 @@ def sql_insert(table_name, columns, rows):
 
     return statements
 
+
+# ============================================================
+# CUSTOMER GENERATION
+# ============================================================
+
 def generate_customers():
     customers = []
 
     start_date = date(2022, 1, 1)
     end_date = date(2026, 8, 31)
 
-    for customer_id in range(1, CUSTOMER_COUNT + 1):
+    for customer_id in range(
+        1,
+        CUSTOMER_COUNT + 1,
+    ):
 
         first_name = random.choice(FIRST_NAMES)
         last_name = random.choice(LAST_NAMES)
 
-        customer_name = f"{first_name} {last_name}"
+        customer_name = (
+            f"{first_name} {last_name}"
+        )
 
         email = (
             f"{first_name.lower()}."
@@ -336,7 +393,11 @@ def generate_customers():
         )
 
         gender = random.choice(
-            ["Male", "Female", "Other"]
+            [
+                "Male",
+                "Female",
+                "Other",
+            ]
         )
 
         date_of_birth = random_date(
@@ -363,16 +424,22 @@ def generate_customers():
             end_date,
         )
 
-        updated_at = datetime.combine(
-            signup_date,
-            datetime.min.time(),
-        ) + timedelta(
-            days=random.randint(0, 365),
-            hours=random.randint(0, 23),
+        updated_at = (
+            datetime.combine(
+                signup_date,
+                datetime.min.time(),
+            )
+            + timedelta(
+                days=random.randint(0, 365),
+                hours=random.randint(0, 23),
+            )
         )
 
-        ingested_at = updated_at + timedelta(
-            hours=random.randint(1, 48)
+        ingested_at = (
+            updated_at
+            + timedelta(
+                hours=random.randint(1, 48)
+            )
         )
 
         # Controlled NULL scenario.
@@ -401,23 +468,37 @@ def generate_customers():
 
     return customers
 
+
+# ============================================================
+# PRODUCT GENERATION
+# ============================================================
+
 def generate_products():
     products = []
 
     product_start_date = date(2022, 1, 1)
     product_end_date = date(2026, 8, 31)
 
-    category_names = list(CATEGORIES.keys())
+    category_names = list(
+        CATEGORIES.keys()
+    )
 
-    for product_id in range(1, PRODUCT_COUNT + 1):
+    for product_id in range(
+        1,
+        PRODUCT_COUNT + 1,
+    ):
 
-        category = random.choice(category_names)
+        category = random.choice(
+            category_names
+        )
 
         subcategory = random.choice(
             CATEGORIES[category]
         )
 
-        brand = random.choice(BRANDS)
+        brand = random.choice(
+            BRANDS
+        )
 
         product_name = (
             f"{brand} "
@@ -425,16 +506,26 @@ def generate_products():
             f"Product {product_id}"
         )
 
-        supplier_id = random.randint(1, 50)
-
-        cost_price = money(
-            random.uniform(200, 20000)
+        supplier_id = random.randint(
+            1,
+            50,
         )
 
-        margin = random.uniform(0.10, 0.45)
+        cost_price = money(
+            random.uniform(
+                200,
+                20000,
+            )
+        )
+
+        margin = random.uniform(
+            0.10,
+            0.45,
+        )
 
         selling_price = money(
-            cost_price * Decimal(
+            cost_price
+            * Decimal(
                 str(1 + margin)
             )
         )
@@ -450,7 +541,11 @@ def generate_products():
         )
 
         product_status = random.choice(
-            ["Active", "Inactive", "Discontinued"]
+            [
+                "Active",
+                "Inactive",
+                "Discontinued",
+            ]
         )
 
         launch_date = random_date(
@@ -463,8 +558,11 @@ def generate_products():
             product_end_date,
         )
 
-        ingested_at = updated_at + timedelta(
-            hours=random.randint(1, 48)
+        ingested_at = (
+            updated_at
+            + timedelta(
+                hours=random.randint(1, 48)
+            )
         )
 
         products.append(
@@ -488,13 +586,21 @@ def generate_products():
 
     return products
 
-def generate_orders(customers):
+
+# ============================================================
+# ORDER GENERATION
+# ============================================================
+
+def generate_orders():
     orders = []
 
     order_start_date = date(2026, 1, 1)
     order_end_date = date(2026, 8, 31)
 
-    for order_id in range(1, ORDER_COUNT + 1):
+    for order_id in range(
+        1,
+        ORDER_COUNT + 1,
+    ):
 
         customer_id = random.randint(
             1,
@@ -519,8 +625,16 @@ def generate_orders(customers):
         )[0]
 
         payment_status = random.choices(
-            ["Paid", "Pending", "Failed"],
-            weights=[80, 10, 10],
+            [
+                "Paid",
+                "Pending",
+                "Failed",
+            ],
+            weights=[
+                80,
+                10,
+                10,
+            ],
         )[0]
 
         shipping_method = random.choice(
@@ -528,27 +642,42 @@ def generate_orders(customers):
         )
 
         shipping_cost = money(
-            random.uniform(40, 250)
+            random.uniform(
+                40,
+                250,
+            )
         )
 
         discount_amount = money(
-            random.uniform(0, 1000)
+            random.uniform(
+                0,
+                1000,
+            )
         )
 
         tax_amount = money(
-            random.uniform(50, 2500)
+            random.uniform(
+                50,
+                2500,
+            )
         )
 
         sales_channel = random.choice(
             SALES_CHANNELS
         )
 
-        updated_at = order_date + timedelta(
-            hours=random.randint(1, 72)
+        updated_at = (
+            order_date
+            + timedelta(
+                hours=random.randint(1, 72)
+            )
         )
 
-        ingested_at = updated_at + timedelta(
-            hours=random.randint(1, 48)
+        ingested_at = (
+            updated_at
+            + timedelta(
+                hours=random.randint(1, 48)
+            )
         )
 
         orders.append(
@@ -603,6 +732,10 @@ def generate_orders(customers):
         0,
     )
 
+    # --------------------------------------------------------
+    # Explicit updated-record scenario
+    # --------------------------------------------------------
+
     updated_order = orders[9]
 
     updated_order["order_status"] = "Delivered"
@@ -627,7 +760,15 @@ def generate_orders(customers):
 
     return orders
 
-def generate_order_items(orders, products):
+
+# ============================================================
+# ORDER ITEM GENERATION
+# ============================================================
+
+def generate_order_items(
+    orders,
+    products,
+):
     order_items = []
 
     order_item_id = 1001
@@ -644,11 +785,17 @@ def generate_order_items(orders, products):
             item_count,
         )
 
-        order_subtotal = Decimal("0.00")
+        order_subtotal = Decimal(
+            "0.00"
+        )
 
         for product in selected_products:
 
             product_id = product[0]
+
+            # product tuple:
+            # product_id is index 0
+            # selling_price is index 7
             historical_price = product[7]
 
             quantity = random.randint(
@@ -657,11 +804,17 @@ def generate_order_items(orders, products):
             )
 
             discount_amount = money(
-                random.uniform(0, 300)
+                random.uniform(
+                    0,
+                    300,
+                )
             )
 
             tax_amount = money(
-                random.uniform(0, 500)
+                random.uniform(
+                    0,
+                    500,
+                )
             )
 
             line_total = money(
@@ -675,14 +828,20 @@ def generate_order_items(orders, products):
             updated_at = (
                 order["updated_at"]
                 + timedelta(
-                    minutes=random.randint(1, 120)
+                    minutes=random.randint(
+                        1,
+                        120,
+                    )
                 )
             )
 
             ingested_at = (
                 updated_at
                 + timedelta(
-                    hours=random.randint(1, 24)
+                    hours=random.randint(
+                        1,
+                        24,
+                    )
                 )
             )
 
@@ -706,17 +865,36 @@ def generate_order_items(orders, products):
 
             order_item_id += 1
 
-        # Update order total based on item-level data.
+        # Initial order total.
         order["total_amount"] = money(
             order_subtotal
             + order["shipping_cost"]
         )
 
+    # ========================================================
+    # CONTROLLED DATA-QUALITY ISSUE #1
+    # Negative quantity
+    # ========================================================
+
     order_items[20]["quantity"] = -1
 
+    # ========================================================
+    # CONTROLLED DATA-QUALITY ISSUE #2
+    # Incorrect line total
+    # ========================================================
+
     order_items[40]["line_total"] = money(
-        order_items[40]["line_total"] + 500
+        order_items[40]["line_total"]
+        + 500
     )
+
+    # ========================================================
+    # Recalculate order totals from the final source values.
+    #
+    # This means the intentionally incorrect line_total will
+    # also create a source-level total inconsistency that we
+    # can detect later in the Silver/data-quality layer.
+    # ========================================================
 
     totals = {}
 
@@ -740,6 +918,11 @@ def generate_order_items(orders, products):
 
     return order_items
 
+
+# ============================================================
+# PAYMENT GENERATION
+# ============================================================
+
 def generate_payments(orders):
     payments = []
 
@@ -747,33 +930,42 @@ def generate_payments(orders):
 
     for order in orders:
 
-        payment_status = order["payment_status"]
+        payment_status = order[
+            "payment_status"
+        ]
 
-        if payment_status == "Failed":
-
-            amount = money(
-                order["total_amount"]
-            )
-
-        else:
-
-            amount = money(
-                order["total_amount"]
-            )
+        amount = money(
+            order["total_amount"]
+        )
 
         payment_date = (
             order["order_date"]
             + timedelta(
-                hours=random.randint(1, 12)
+                hours=random.randint(
+                    1,
+                    12,
+                )
             )
         )
 
-        updated_at = payment_date + timedelta(
-            hours=random.randint(1, 24)
+        updated_at = (
+            payment_date
+            + timedelta(
+                hours=random.randint(
+                    1,
+                    24,
+                )
+            )
         )
 
-        ingested_at = updated_at + timedelta(
-            hours=random.randint(1, 24)
+        ingested_at = (
+            updated_at
+            + timedelta(
+                hours=random.randint(
+                    1,
+                    24,
+                )
+            )
         )
 
         transaction_reference = (
@@ -785,7 +977,9 @@ def generate_payments(orders):
                 payment_id,
                 order["order_id"],
                 payment_date,
-                random.choice(PAYMENT_METHODS),
+                random.choice(
+                    PAYMENT_METHODS
+                ),
                 payment_status,
                 amount,
                 transaction_reference,
@@ -798,6 +992,11 @@ def generate_payments(orders):
 
     return payments
 
+
+# ============================================================
+# SHIPMENT GENERATION
+# ============================================================
+
 def generate_shipments(orders):
     shipments = []
 
@@ -807,7 +1006,10 @@ def generate_shipments(orders):
         order
         for order in orders
         if order["order_status"]
-        not in ["Cancelled", "Pending"]
+        not in [
+            "Cancelled",
+            "Pending",
+        ]
     ]
 
     selected_orders = random.sample(
@@ -823,7 +1025,10 @@ def generate_shipments(orders):
         shipped_at = (
             order["order_date"]
             + timedelta(
-                days=random.randint(1, 3)
+                days=random.randint(
+                    1,
+                    3,
+                )
             )
         )
 
@@ -844,7 +1049,10 @@ def generate_shipments(orders):
             delivered_at = (
                 shipped_at
                 + timedelta(
-                    days=random.randint(1, 7)
+                    days=random.randint(
+                        1,
+                        7,
+                    )
                 )
             )
 
@@ -862,12 +1070,24 @@ def generate_shipments(orders):
             else shipped_at
         )
 
-        updated_at = updated_at + timedelta(
-            hours=random.randint(1, 24)
+        updated_at = (
+            updated_at
+            + timedelta(
+                hours=random.randint(
+                    1,
+                    24,
+                )
+            )
         )
 
-        ingested_at = updated_at + timedelta(
-            hours=random.randint(1, 24)
+        ingested_at = (
+            updated_at
+            + timedelta(
+                hours=random.randint(
+                    1,
+                    24,
+                )
+            )
         )
 
         shipments.append(
@@ -888,6 +1108,11 @@ def generate_shipments(orders):
         shipment_id += 1
 
     return shipments
+
+
+# ============================================================
+# RETURN GENERATION
+# ============================================================
 
 def generate_returns(order_items):
     returns = []
@@ -918,7 +1143,10 @@ def generate_returns(order_items):
         return_date = (
             item["updated_at"]
             + timedelta(
-                days=random.randint(2, 30)
+                days=random.randint(
+                    2,
+                    30,
+                )
             )
         )
 
@@ -934,14 +1162,20 @@ def generate_returns(order_items):
         updated_at = (
             return_date
             + timedelta(
-                hours=random.randint(1, 48)
+                hours=random.randint(
+                    1,
+                    48,
+                )
             )
         )
 
         ingested_at = (
             updated_at
             + timedelta(
-                hours=random.randint(1, 24)
+                hours=random.randint(
+                    1,
+                    24,
+                )
             )
         )
 
@@ -950,7 +1184,9 @@ def generate_returns(order_items):
                 return_id,
                 item["order_item_id"],
                 return_date,
-                random.choice(RETURN_REASONS),
+                random.choice(
+                    RETURN_REASONS
+                ),
                 return_quantity,
                 refund_amount,
                 return_status,
@@ -963,6 +1199,11 @@ def generate_returns(order_items):
 
     return returns
 
+
+# ============================================================
+# SQL GENERATION
+# ============================================================
+
 def generate_sql(
     customers,
     products,
@@ -972,7 +1213,29 @@ def generate_sql(
     shipments,
     returns,
 ):
+    """
+    Convert all generated Python data into executable SQL.
+
+    The SQL is generated in dependency order:
+
+        customers
+            ↓
+        products
+            ↓
+        orders
+            ↓
+        order_items
+            ↓
+        payments
+        shipments
+        returns
+    """
+
     sql = []
+
+    # ========================================================
+    # HEADER
+    # ========================================================
 
     sql.append(
         "-- =====================================================\n"
@@ -986,6 +1249,10 @@ def generate_sql(
         "-- the generated dataset.\n"
     )
 
+    # ========================================================
+    # RESET RAW TABLES
+    # ========================================================
+
     sql.append(
         "TRUNCATE TABLE "
         "raw.returns, "
@@ -998,7 +1265,15 @@ def generate_sql(
         "RESTART IDENTITY CASCADE;\n"
     )
 
-    # sql.append()
+    # ========================================================
+    # CUSTOMERS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- CUSTOMERS\n"
+        "-- =====================================================\n"
+    )
 
     customer_columns = [
         "customer_id",
@@ -1018,15 +1293,23 @@ def generate_sql(
         "ingested_at",
     ]
 
-    sql.extend(
-        sql_insert(
-            "customers",
-            customer_columns,
-            customers,
-        )
+    customer_sql = sql_insert(
+        "customers",
+        customer_columns,
+        customers,
     )
 
-    # sql.append()
+    sql.extend(customer_sql)
+
+    # ========================================================
+    # PRODUCTS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- PRODUCTS\n"
+        "-- =====================================================\n"
+    )
 
     product_columns = [
         "product_id",
@@ -1045,15 +1328,23 @@ def generate_sql(
         "ingested_at",
     ]
 
-    sql.extend(
-        sql_insert(
-            "products",
-            product_columns,
-            products,
-        )
+    product_sql = sql_insert(
+        "products",
+        product_columns,
+        products,
     )
 
-    # sql.append()
+    sql.extend(product_sql)
+
+    # ========================================================
+    # ORDERS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- ORDERS\n"
+        "-- =====================================================\n"
+    )
 
     order_columns = [
         "order_id",
@@ -1092,15 +1383,23 @@ def generate_sql(
         for order in orders
     ]
 
-    sql.extend(
-        sql_insert(
-            "orders",
-            order_columns,
-            order_rows,
-        )
+    order_sql = sql_insert(
+        "orders",
+        order_columns,
+        order_rows,
     )
 
-    # sql.append()
+    sql.extend(order_sql)
+
+    # ========================================================
+    # ORDER ITEMS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- ORDER ITEMS\n"
+        "-- =====================================================\n"
+    )
 
     order_item_columns = [
         "order_item_id",
@@ -1133,15 +1432,23 @@ def generate_sql(
         for item in order_items
     ]
 
-    sql.extend(
-        sql_insert(
-            "order_items",
-            order_item_columns,
-            order_item_rows,
-        )
+    order_item_sql = sql_insert(
+        "order_items",
+        order_item_columns,
+        order_item_rows,
     )
 
-    # sql.append()
+    sql.extend(order_item_sql)
+
+    # ========================================================
+    # PAYMENTS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- PAYMENTS\n"
+        "-- =====================================================\n"
+    )
 
     payment_columns = [
         "payment_id",
@@ -1155,15 +1462,23 @@ def generate_sql(
         "ingested_at",
     ]
 
-    sql.extend(
-        sql_insert(
-            "payments",
-            payment_columns,
-            payments,
-        )
+    payment_sql = sql_insert(
+        "payments",
+        payment_columns,
+        payments,
     )
 
-    # sql.append()
+    sql.extend(payment_sql)
+
+    # ========================================================
+    # SHIPMENTS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- SHIPMENTS\n"
+        "-- =====================================================\n"
+    )
 
     shipment_columns = [
         "shipment_id",
@@ -1178,15 +1493,23 @@ def generate_sql(
         "ingested_at",
     ]
 
-    sql.extend(
-        sql_insert(
-            "shipments",
-            shipment_columns,
-            shipments,
-        )
+    shipment_sql = sql_insert(
+        "shipments",
+        shipment_columns,
+        shipments,
     )
 
-    # sql.append()
+    sql.extend(shipment_sql)
+
+    # ========================================================
+    # RETURNS
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- RETURNS\n"
+        "-- =====================================================\n"
+    )
 
     return_columns = [
         "return_id",
@@ -1200,23 +1523,94 @@ def generate_sql(
         "ingested_at",
     ]
 
-    sql.extend(
-        sql_insert(
-            "returns",
-            return_columns,
-            returns,
-        )
+    return_sql = sql_insert(
+        "returns",
+        return_columns,
+        returns,
     )
 
-    # sql.append()
+    sql.extend(return_sql)
+
+    # ========================================================
+    # FOOTER
+    # ========================================================
+
+    sql.append(
+        "\n-- =====================================================\n"
+        "-- END OF GENERATED DATA\n"
+        "-- =====================================================\n"
+    )
+
+    # ========================================================
+    # SQL GENERATION VALIDATION
+    # ========================================================
+
+    expected_counts = {
+        "customers": len(customers),
+        "products": len(products),
+        "orders": len(orders),
+        "order_items": len(order_items),
+        "payments": len(payments),
+        "shipments": len(shipments),
+        "returns": len(returns),
+    }
+
+    actual_counts = {
+        "customers": len(customer_sql),
+        "products": len(product_sql),
+        "orders": len(order_sql),
+        "order_items": len(order_item_sql),
+        "payments": len(payment_sql),
+        "shipments": len(shipment_sql),
+        "returns": len(return_sql),
+    }
+
+    print("\nSQL generation validation:")
+    print("-" * 55)
+
+    for table_name in expected_counts:
+
+        expected = expected_counts[table_name]
+        actual = actual_counts[table_name]
+
+        print(
+            f"{table_name:<15}"
+            f" expected={expected:<4}"
+            f" generated={actual:<4}"
+        )
+
+        if expected != actual:
+
+            raise ValueError(
+                f"SQL generation failed for "
+                f"{table_name}: "
+                f"expected {expected} INSERT statements, "
+                f"but generated {actual}."
+            )
+
+    print("-" * 55)
+
+    print(
+        f"Total SQL statements generated: "
+        f"{len(sql)}"
+    )
 
     return "\n".join(sql)
+
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
 
     print("=" * 60)
     print("E-COMMERCE RAW DATA GENERATOR")
     print("=" * 60)
+
+    # --------------------------------------------------------
+    # Generate source datasets
+    # --------------------------------------------------------
 
     print("\nGenerating customers...")
     customers = generate_customers()
@@ -1225,7 +1619,7 @@ def main():
     products = generate_products()
 
     print("Generating orders...")
-    orders = generate_orders(customers)
+    orders = generate_orders()
 
     print("Generating order items...")
     order_items = generate_order_items(
@@ -1248,6 +1642,54 @@ def main():
         order_items
     )
 
+    # --------------------------------------------------------
+    # Validate high-level counts
+    # --------------------------------------------------------
+
+    if len(customers) != CUSTOMER_COUNT:
+        raise ValueError(
+            f"Expected {CUSTOMER_COUNT} customers, "
+            f"got {len(customers)}."
+        )
+
+    if len(products) != PRODUCT_COUNT:
+        raise ValueError(
+            f"Expected {PRODUCT_COUNT} products, "
+            f"got {len(products)}."
+        )
+
+    if len(orders) != ORDER_COUNT:
+        raise ValueError(
+            f"Expected {ORDER_COUNT} orders, "
+            f"got {len(orders)}."
+        )
+
+    if len(payments) != PAYMENT_COUNT:
+        raise ValueError(
+            f"Expected {PAYMENT_COUNT} payments, "
+            f"got {len(payments)}."
+        )
+
+    if not (
+        280 <= len(shipments) <= 300
+    ):
+        raise ValueError(
+            f"Expected shipments between 280 and 300, "
+            f"got {len(shipments)}."
+        )
+
+    if not (
+        20 <= len(returns) <= 40
+    ):
+        raise ValueError(
+            f"Expected returns between 20 and 40, "
+            f"got {len(returns)}."
+        )
+
+    # --------------------------------------------------------
+    # Generate SQL
+    # --------------------------------------------------------
+
     sql = generate_sql(
         customers,
         products,
@@ -1258,6 +1700,10 @@ def main():
         returns,
     )
 
+    # --------------------------------------------------------
+    # Write SQL file
+    # --------------------------------------------------------
+
     OUTPUT_FILE.parent.mkdir(
         parents=True,
         exist_ok=True,
@@ -1267,6 +1713,10 @@ def main():
         sql,
         encoding="utf-8",
     )
+
+    # --------------------------------------------------------
+    # Final output
+    # --------------------------------------------------------
 
     print("\n" + "=" * 60)
     print("DATA GENERATION COMPLETE")
@@ -1280,13 +1730,16 @@ def main():
     print(f"Shipments   : {len(shipments)}")
     print(f"Returns     : {len(returns)}")
 
-    print(f"\nSQL file:")
+    print("\nSQL file:")
     print(OUTPUT_FILE)
 
     print("\nRandom seed:")
     print(RANDOM_SEED)
 
-    print("\nThe generated SQL is ready to be loaded into PostgreSQL.")
+    print(
+        "\nThe generated SQL is ready "
+        "to be validated before loading."
+    )
 
 
 if __name__ == "__main__":
