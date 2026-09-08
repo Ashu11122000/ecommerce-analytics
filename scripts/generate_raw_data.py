@@ -13,6 +13,15 @@ The generated SQL loads:
     - shipments
     - returns
 
+Target record counts:
+    - customers   = 120
+    - products    = 500
+    - orders      = 320
+    - order_items = approximately 600
+    - payments    = 320
+    - shipments   = 280-300
+    - returns     = 20-40
+
 The data includes:
     - different business dates
     - different ingestion batches
@@ -58,6 +67,7 @@ CUSTOMER_COUNT = 120
 PRODUCT_COUNT = 500
 ORDER_COUNT = 320
 
+# 1-3 items per order gives approximately 600+ items.
 MIN_ORDER_ITEMS = 1
 MAX_ORDER_ITEMS = 3
 
@@ -702,6 +712,10 @@ def generate_products():
 
 def generate_orders():
 
+# ORDER GENERATION
+# ============================================================
+
+def generate_orders():
     orders = []
 
     order_start_date = date(
