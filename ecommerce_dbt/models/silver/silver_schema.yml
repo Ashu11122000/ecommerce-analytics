@@ -1,10 +1,12 @@
 version: 2
 
 models:
+
   - name: silver_customers
-    description: "Cleaned and standardized customer data for downstream analytics."
+    description: "Business-ready customer data with derived customer attributes and standardized status classifications."
 
     columns:
+
       - name: customer_id
         description: "Unique identifier for each customer."
         tests:
@@ -21,15 +23,55 @@ models:
         tests:
           - not_null
 
+      - name: phone
+        description: "Customer phone number."
+
+      - name: gender
+        description: "Customer gender."
+
+      - name: date_of_birth
+        description: "Customer date of birth."
+
       - name: city
         description: "Customer city."
-        tests:
-          - not_null
+
+      - name: state
+        description: "Customer state."
+
+      - name: country
+        description: "Customer country."
+
+      - name: postal_code
+        description: "Customer postal code."
+
+      - name: customer_segment
+        description: "Customer segment."
+
+      - name: customer_status
+        description: "Current customer status."
 
       - name: signup_date
         description: "Date when the customer signed up."
         tests:
           - not_null
+
+      - name: customer_age
+        description: "Customer age calculated from date of birth."
+
+      - name: age_group
+        description: "Business-friendly customer age classification."
+
+      - name: customer_tenure_days
+        description: "Number of days since the customer signed up."
+
+      - name: is_active_customer
+        description: "Boolean flag indicating whether the customer is currently active."
+
+      - name: customer_status_group
+        description: "Business-friendly grouping of customer statuses."
+
+      - name: updated_at
+        description: "Timestamp when the source customer record was last updated."
 
       - name: ingested_at
         description: "Timestamp when the record was ingested into the raw source layer."
@@ -47,9 +89,10 @@ models:
           - not_null
 
   - name: silver_products
-    description: "Cleaned and validated product catalog data."
+    description: "Business-ready product catalog data with profitability, pricing, inventory, and product-status transformations."
 
     columns:
+
       - name: product_id
         description: "Unique identifier for each product."
         tests:
@@ -62,14 +105,54 @@ models:
           - not_null
 
       - name: category
-        description: "Product category."
+        description: "Standardized product category."
         tests:
           - not_null
 
-      - name: price
-        description: "Current product price."
-        tests:
-          - not_null
+      - name: subcategory
+        description: "Product subcategory."
+
+      - name: brand
+        description: "Product brand."
+
+      - name: supplier_id
+        description: "Identifier of the product supplier."
+
+      - name: cost_price
+        description: "Cost price of the product."
+
+      - name: selling_price
+        description: "Selling price of the product."
+
+      - name: stock_quantity
+        description: "Current available stock quantity."
+
+      - name: reorder_level
+        description: "Stock level at which replenishment should be considered."
+
+      - name: product_status
+        description: "Current product status."
+
+      - name: launch_date
+        description: "Date when the product was launched."
+
+      - name: profit_amount
+        description: "Profit generated per product unit based on selling price minus cost price."
+
+      - name: profit_margin_pct
+        description: "Profit margin percentage calculated from selling price and cost price."
+
+      - name: stock_status
+        description: "Business classification of the current product stock level."
+
+      - name: price_band
+        description: "Business classification of the product based on selling price."
+
+      - name: is_active_product
+        description: "Boolean flag indicating whether the product is currently active."
+
+      - name: updated_at
+        description: "Timestamp when the source product record was last updated."
 
       - name: ingested_at
         description: "Timestamp when the record was ingested into the raw source layer."
@@ -87,9 +170,10 @@ models:
           - not_null
 
   - name: silver_orders
-    description: "Cleaned and standardized order transaction data."
+    description: "Business-ready order transaction data with order value calculations, status classifications, payment flags, and late-arrival detection."
 
     columns:
+
       - name: order_id
         description: "Unique identifier for each order."
         tests:
@@ -111,12 +195,61 @@ models:
           - not_null
 
       - name: order_status
-        description: "Standardized order status."
-        tests:
-          - not_null
+        description: "Current order status."
+
+      - name: payment_status
+        description: "Payment status associated with the order."
+
+      - name: shipping_method
+        description: "Shipping method used for the order."
+
+      - name: shipping_cost
+        description: "Shipping cost associated with the order."
+
+      - name: discount_amount
+        description: "Discount applied to the order."
+
+      - name: tax_amount
+        description: "Tax charged on the order."
+
+      - name: total_amount
+        description: "Total order amount."
+
+      - name: sales_channel
+        description: "Channel through which the order was placed."
+
+      - name: currency
+        description: "Currency used for the order."
+
+      - name: amount_before_tax
+        description: "Order total excluding tax."
+
+      - name: gross_order_value
+        description: "Calculated order value before tax adjustment based on total amount and discount."
+
+      - name: has_discount
+        description: "Boolean flag indicating whether a discount was applied."
+
+      - name: has_shipping_cost
+        description: "Boolean flag indicating whether a shipping charge was applied."
+
+      - name: order_status_group
+        description: "Business-friendly grouping of order statuses."
+
+      - name: is_payment_successful
+        description: "Boolean flag indicating whether the associated payment status represents a successful payment."
+
+      - name: is_late_arriving
+        description: "Boolean flag identifying records ingested more than seven days after the order date."
+
+      - name: ingestion_delay_days
+        description: "Number of days between the order date and raw-layer ingestion."
+
+      - name: updated_at
+        description: "Timestamp when the source order record was last updated."
 
       - name: ingested_at
-        description: "Timestamp when the record was ingested into the raw source layer."
+        description: "Timestamp when the order record was ingested into the raw source layer."
         tests:
           - not_null
 
@@ -131,9 +264,10 @@ models:
           - not_null
 
   - name: silver_order_items
-    description: "Cleaned and validated line-item level order transaction data."
+    description: "Business-ready line-item transaction data with calculated totals, data-quality flags, and return metrics."
 
     columns:
+
       - name: order_item_id
         description: "Unique identifier for each order item."
         tests:
@@ -168,8 +302,269 @@ models:
         tests:
           - not_null
 
+      - name: discount_amount
+        description: "Discount applied to the line item."
+
+      - name: tax_amount
+        description: "Tax applied to the line item."
+
+      - name: line_total
+        description: "Line-item total provided by the source system."
+
+      - name: returned_quantity
+        description: "Number of units returned for this line item."
+
+      - name: calculated_line_total
+        description: "Line-item total independently calculated from quantity, unit price, discount, and tax."
+
+      - name: line_total_variance
+        description: "Difference between the source line total and independently calculated line total."
+
+      - name: is_line_total_mismatch
+        description: "Boolean flag indicating whether the source line total differs from the calculated value."
+
+      - name: has_negative_quantity
+        description: "Boolean flag identifying line items with a negative quantity."
+
+      - name: has_return
+        description: "Boolean flag indicating whether any quantity from the line item was returned."
+
+      - name: return_rate
+        description: "Percentage of ordered quantity that was returned."
+
+      - name: updated_at
+        description: "Timestamp when the source order-item record was last updated."
+
       - name: ingested_at
-        description: "Timestamp when the record was ingested into the raw source layer."
+        description: "Timestamp when the order-item record was ingested into the raw source layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was processed in the Silver layer."
+        tests:
+          - not_null
+
+  - name: silver_payments
+    description: "Business-ready payment transaction data with payment status classifications and payment quality attributes."
+
+    columns:
+
+      - name: payment_id
+        description: "Unique identifier for each payment."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order associated with the payment."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_id
+
+      - name: payment_date
+        description: "Timestamp when the payment was processed."
+        tests:
+          - not_null
+
+      - name: payment_method
+        description: "Payment method."
+
+      - name: payment_status
+        description: "Original payment status."
+
+      - name: amount
+        description: "Payment amount."
+        tests:
+          - not_null
+
+      - name: transaction_reference
+        description: "Payment transaction reference."
+
+      - name: payment_status_group
+        description: "Business-friendly grouping of payment statuses."
+
+      - name: is_successful_payment
+        description: "Boolean flag indicating whether the payment was successful."
+
+      - name: payment_amount_band
+        description: "Business classification of the payment amount."
+
+      - name: has_transaction_reference
+        description: "Boolean flag indicating whether a transaction reference is available."
+
+      - name: payment_update_delay_days
+        description: "Number of days between payment processing and source record update."
+
+      - name: updated_at
+        description: "Timestamp when the source payment record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the payment record was ingested into the raw source layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was processed in the Silver layer."
+        tests:
+          - not_null
+
+  - name: silver_shipments
+    description: "Business-ready shipment data with delivery duration, shipment status classification, and delivery performance indicators."
+
+    columns:
+
+      - name: shipment_id
+        description: "Unique identifier for each shipment."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order associated with the shipment."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_orders')
+                field: order_id
+
+      - name: shipping_method
+        description: "Shipping method used for the shipment."
+        tests:
+          - not_null
+
+      - name: shipment_status
+        description: "Original shipment status."
+        tests:
+          - not_null
+
+      - name: shipped_at
+        description: "Timestamp when the shipment was shipped."
+
+      - name: delivered_at
+        description: "Timestamp when the shipment was delivered."
+
+      - name: delivery_city
+        description: "City where the shipment was delivered."
+
+      - name: delivery_state
+        description: "State where the shipment was delivered."
+
+      - name: delivery_days
+        description: "Number of days between shipment and delivery."
+
+      - name: is_delivered
+        description: "Boolean flag indicating whether the shipment has been delivered."
+
+      - name: shipment_status_group
+        description: "Business-friendly grouping of shipment statuses."
+
+      - name: delivery_speed
+        description: "Classification of delivery speed based on delivery duration."
+
+      - name: is_delivery_delayed
+        description: "Boolean flag indicating whether delivery took more than five days."
+
+      - name: updated_at
+        description: "Timestamp when the source shipment record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the shipment record was ingested into the raw source layer."
+        tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp when the record was processed in the Bronze layer."
+        tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp when the record was processed in the Silver layer."
+        tests:
+          - not_null
+
+  - name: silver_returns
+    description: "Business-ready return transaction data with return status classification, refund metrics, quality flags, and timing attributes."
+
+    columns:
+
+      - name: return_id
+        description: "Unique identifier for each return."
+        tests:
+          - not_null
+          - unique
+
+      - name: order_item_id
+        description: "Identifier of the order item associated with the return."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_order_items')
+                field: order_item_id
+
+      - name: return_date
+        description: "Timestamp when the return occurred."
+        tests:
+          - not_null
+
+      - name: return_reason
+        description: "Reason for the return."
+        tests:
+          - not_null
+
+      - name: return_quantity
+        description: "Number of units returned."
+        tests:
+          - not_null
+
+      - name: refund_amount
+        description: "Amount refunded for the return."
+        tests:
+          - not_null
+
+      - name: return_status
+        description: "Original return status."
+        tests:
+          - not_null
+
+      - name: return_status_group
+        description: "Business-friendly grouping of return statuses."
+
+      - name: is_return_approved
+        description: "Boolean flag indicating whether the return was approved or processed."
+
+      - name: refund_per_unit
+        description: "Refund amount calculated per returned unit."
+
+      - name: has_refund
+        description: "Boolean flag indicating whether a refund amount exists."
+
+      - name: has_invalid_return_quantity
+        description: "Boolean flag identifying zero or negative return quantities."
+
+      - name: return_update_delay_days
+        description: "Number of days between the return date and source record update."
+
+      - name: updated_at
+        description: "Timestamp when the source return record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the return record was ingested into the raw source layer."
         tests:
           - not_null
 
