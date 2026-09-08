@@ -19,6 +19,7 @@ Target record counts:
     - orders      = 320
     - order_items = approximately 600
     - payments    = 320
+<<<<<<< HEAD
     - shipments   = 290
     - returns     = 30
 
@@ -29,6 +30,19 @@ The generated data includes:
     - business/event timestamps
     - updated_at timestamps
     - ingested_at timestamps
+=======
+    - shipments   = 280-300
+    - returns     = 20-40
+
+The data includes:
+    - different business dates
+    - different ingestion batches
+    - realistic relationships
+    - historical product prices
+    - payment states
+    - shipment states
+    - returns
+>>>>>>> 7671b20a59c4e874287fdb0264cc693b4162369c
     - late-arriving records
     - updated records
     - NULL values
@@ -85,7 +99,11 @@ CUSTOMER_COUNT = 120
 PRODUCT_COUNT = 500
 ORDER_COUNT = 320
 
+<<<<<<< HEAD
 # Approximately 600 order items.
+=======
+# 1-3 items per order gives approximately 600+ items.
+>>>>>>> 7671b20a59c4e874287fdb0264cc693b4162369c
 MIN_ORDER_ITEMS = 1
 MAX_ORDER_ITEMS = 3
 TARGET_AVERAGE_ITEMS_PER_ORDER = 1.9
@@ -774,6 +792,10 @@ def generate_products():
 
 def generate_orders():
 
+# ORDER GENERATION
+# ============================================================
+
+def generate_orders():
     orders = []
 
     order_start_date = date(
