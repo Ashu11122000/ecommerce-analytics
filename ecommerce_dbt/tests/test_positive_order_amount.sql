@@ -1,3 +1,4 @@
+
 /*
     Test: Positive Order Amount
 
@@ -14,4 +15,4 @@ SELECT
     total_amount
 FROM {{ ref('silver_orders') }}
 WHERE total_amount IS NULL
-    OR total_amount <= 0
+   OR total_amount <= 0
