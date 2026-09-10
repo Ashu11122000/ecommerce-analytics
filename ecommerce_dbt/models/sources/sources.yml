@@ -2,10 +2,10 @@ version: 2
 
 sources:
   - name: raw
-    description: "Raw OLTP-style source tables for the E-Commerce Analytics Engineering project."
-    schema: raw
+    description: "Raw e-commerce source data loaded into PostgreSQL."
 
     config:
+      tags: ["raw", "source"]
       freshness:
         warn_after:
           count: 24
@@ -17,297 +17,206 @@ sources:
 
     tables:
 
-      # ---------------------------------------------------------
-      # CUSTOMERS
-      # ---------------------------------------------------------
       - name: customers
-        description: "Raw customer master data."
-
+        description: "Raw customer records."
+        config:
+          tags: ["raw", "customer"]
         columns:
           - name: customer_id
-            description: "Unique identifier for the customer."
-
-          - name: first_name
-            description: "Customer first name."
-
-          - name: last_name
-            description: "Customer last name."
-
+            description: "Unique customer identifier."
+          - name: customer_name
+            description: "Customer full name."
           - name: email
             description: "Customer email address."
-
           - name: phone
-            description: "Customer phone number. May be NULL."
-
+            description: "Customer phone number."
+          - name: gender
+            description: "Customer gender."
+          - name: date_of_birth
+            description: "Customer date of birth."
           - name: city
             description: "Customer city."
-
           - name: state
             description: "Customer state."
-
           - name: country
             description: "Customer country."
-
-          - name: signup_date
-            description: "Date when the customer signed up."
-
+          - name: postal_code
+            description: "Customer postal code."
+          - name: customer_segment
+            description: "Customer segment."
           - name: customer_status
-            description: "Current customer status."
-
+            description: "Customer status."
+          - name: signup_date
+            description: "Customer signup date."
           - name: updated_at
-            description: "Timestamp when the source record was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the record was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
 
-
-      # ---------------------------------------------------------
-      # PRODUCTS
-      # ---------------------------------------------------------
       - name: products
-        description: "Raw product catalog data."
-
+        description: "Raw product records."
+        config:
+          tags: ["raw", "product"]
         columns:
           - name: product_id
-            description: "Unique identifier for the product."
-
+            description: "Unique product identifier."
           - name: product_name
             description: "Product name."
-
           - name: category
             description: "Product category."
-
           - name: subcategory
             description: "Product subcategory."
-
           - name: brand
             description: "Product brand."
-
-          - name: supplier_id
-            description: "Identifier of the product supplier."
-
           - name: cost_price
-            description: "Cost paid to acquire the product."
-
+            description: "Product cost price."
           - name: selling_price
-            description: "Price at which the product is sold."
-
+            description: "Product selling price."
           - name: stock_quantity
-            description: "Current available stock quantity."
-
+            description: "Available stock quantity."
           - name: reorder_level
-            description: "Stock level at which replenishment should be considered."
-
+            description: "Stock reorder threshold."
           - name: product_status
-            description: "Current product status."
-
+            description: "Product status."
           - name: launch_date
-            description: "Date when the product was launched."
-
+            description: "Product launch date."
           - name: updated_at
-            description: "Timestamp when the source record was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the record was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
 
-
-      # ---------------------------------------------------------
-      # ORDERS
-      # ---------------------------------------------------------
       - name: orders
-        description: "Raw customer order transactions."
-
+        description: "Raw customer order records."
+        config:
+          tags: ["raw", "transaction", "order"]
         columns:
           - name: order_id
-            description: "Unique identifier for the order."
-
+            description: "Unique order identifier."
           - name: customer_id
             description: "Customer who placed the order."
-
           - name: order_date
-            description: "Date and time when the order was placed."
-
+            description: "Order creation timestamp."
           - name: order_status
-            description: "Current status of the order."
-
+            description: "Order status."
           - name: payment_status
-            description: "Payment status associated with the order."
-
-          - name: shipping_status
-            description: "Shipping status associated with the order."
-
-          - name: shipping_address
-            description: "Shipping address associated with the order."
-
-          - name: subtotal
-            description: "Order subtotal before discounts and taxes."
-
+            description: "Payment status."
+          - name: shipping_method
+            description: "Shipping method."
+          - name: shipping_cost
+            description: "Shipping cost."
           - name: discount_amount
-            description: "Total discount applied to the order."
-
+            description: "Discount applied to the order."
           - name: tax_amount
-            description: "Total tax charged on the order."
-
-          - name: shipping_fee
-            description: "Shipping fee charged for the order."
-
+            description: "Tax amount."
           - name: total_amount
-            description: "Final total amount of the order."
-
+            description: "Total order amount."
+          - name: sales_channel
+            description: "Sales channel."
+          - name: currency
+            description: "Order currency."
           - name: updated_at
-            description: "Timestamp when the source order was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the order was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
 
-
-      # ---------------------------------------------------------
-      # ORDER ITEMS
-      # ---------------------------------------------------------
       - name: order_items
-        description: "Raw line-item level order transaction data."
-
+        description: "Raw order line-item records."
+        config:
+          tags: ["raw", "transaction", "order_item", "incremental"]
         columns:
           - name: order_item_id
-            description: "Unique identifier for the order line item."
-
+            description: "Unique order item identifier."
           - name: order_id
-            description: "Order associated with the line item."
-
+            description: "Order identifier."
           - name: product_id
-            description: "Product associated with the line item."
-
+            description: "Product identifier."
           - name: quantity
-            description: "Number of units ordered."
-
+            description: "Quantity ordered."
           - name: unit_price
-            description: "Price per unit at the time of purchase."
-
+            description: "Unit selling price."
           - name: discount_amount
             description: "Discount applied to the line item."
-
           - name: tax_amount
-            description: "Tax applied to the line item."
-
+            description: "Tax amount for the line item."
           - name: line_total
-            description: "Total amount for the line item."
-
+            description: "Total value of the line item."
           - name: returned_quantity
-            description: "Number of units from the line item that were returned."
-
+            description: "Quantity returned."
           - name: updated_at
-            description: "Timestamp when the source line item was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the line item was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
 
-
-      # ---------------------------------------------------------
-      # PAYMENTS
-      # ---------------------------------------------------------
       - name: payments
-        description: "Raw payment transactions associated with customer orders."
-
+        description: "Raw payment transaction records."
+        config:
+          tags: ["raw", "transaction", "payment"]
         columns:
           - name: payment_id
-            description: "Unique identifier for the payment."
-
+            description: "Unique payment identifier."
           - name: order_id
             description: "Order associated with the payment."
-
           - name: payment_date
-            description: "Date and time when the payment was processed."
-
+            description: "Payment timestamp."
           - name: payment_method
-            description: "Method used to make the payment."
-
+            description: "Payment method."
           - name: payment_status
-            description: "Current payment status."
-
+            description: "Payment status."
           - name: amount
             description: "Payment amount."
-
           - name: transaction_reference
-            description: "Reference associated with the payment transaction."
-
+            description: "Payment transaction reference."
           - name: updated_at
-            description: "Timestamp when the source payment record was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the payment was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
 
-
-      # ---------------------------------------------------------
-      # SHIPMENTS
-      # ---------------------------------------------------------
       - name: shipments
-        description: "Raw shipment and delivery information associated with orders."
-
+        description: "Raw shipment records."
+        config:
+          tags: ["raw", "transaction", "shipment"]
         columns:
           - name: shipment_id
-            description: "Unique identifier for the shipment."
-
+            description: "Unique shipment identifier."
           - name: order_id
             description: "Order associated with the shipment."
-
-          - name: shipment_date
-            description: "Date and time when the shipment was created."
-
-          - name: carrier
-            description: "Shipping carrier."
-
-          - name: tracking_number
-            description: "Shipment tracking number."
-
+          - name: shipping_method
+            description: "Shipping method."
           - name: shipment_status
-            description: "Current shipment status."
-
-          - name: estimated_delivery_date
-            description: "Expected delivery date."
-
-          - name: actual_delivery_date
-            description: "Actual delivery date."
-
-          - name: shipping_cost
-            description: "Cost of shipping."
-
+            description: "Shipment status."
+          - name: shipped_at
+            description: "Shipment dispatch timestamp."
+          - name: delivered_at
+            description: "Shipment delivery timestamp."
+          - name: delivery_city
+            description: "Delivery city."
+          - name: delivery_state
+            description: "Delivery state."
           - name: updated_at
-            description: "Timestamp when the source shipment record was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the shipment was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
 
-
-      # ---------------------------------------------------------
-      # RETURNS
-      # ---------------------------------------------------------
       - name: returns
-        description: "Raw product return transactions associated with order items."
-
+        description: "Raw product return records."
+        config:
+          tags: ["raw", "transaction", "return"]
         columns:
           - name: return_id
-            description: "Unique identifier for the return."
-
+            description: "Unique return identifier."
           - name: order_item_id
             description: "Order item associated with the return."
-
           - name: return_date
-            description: "Date when the product was returned."
-
-          - name: return_quantity
-            description: "Number of units returned."
-
+            description: "Return timestamp."
           - name: return_reason
-            description: "Reason provided for the return."
-
-          - name: return_status
-            description: "Current status of the return."
-
+            description: "Reason for the return."
+          - name: return_quantity
+            description: "Quantity returned."
           - name: refund_amount
-            description: "Amount refunded for the return."
-
+            description: "Refund amount."
+          - name: return_status
+            description: "Return status."
           - name: updated_at
-            description: "Timestamp when the source return record was last updated."
-
+            description: "Timestamp when the record was last updated."
           - name: ingested_at
-            description: "Timestamp when the return was loaded into the raw layer."
+            description: "Timestamp when the record was ingested."
