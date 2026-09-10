@@ -23,12 +23,6 @@ sources:
       - name: customers
         description: "Raw customer master data."
 
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
-
         columns:
           - name: customer_id
             description: "Unique identifier for the customer."
@@ -72,12 +66,6 @@ sources:
       # ---------------------------------------------------------
       - name: products
         description: "Raw product catalog data."
-
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
 
         columns:
           - name: product_id
@@ -129,12 +117,6 @@ sources:
       - name: orders
         description: "Raw customer order transactions."
 
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
-
         columns:
           - name: order_id
             description: "Unique identifier for the order."
@@ -185,12 +167,6 @@ sources:
       - name: order_items
         description: "Raw line-item level order transaction data."
 
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
-
         columns:
           - name: order_item_id
             description: "Unique identifier for the order line item."
@@ -232,12 +208,6 @@ sources:
       - name: payments
         description: "Raw payment transactions associated with customer orders."
 
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
-
         columns:
           - name: payment_id
             description: "Unique identifier for the payment."
@@ -272,12 +242,6 @@ sources:
       # ---------------------------------------------------------
       - name: shipments
         description: "Raw shipment and delivery information associated with orders."
-
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
 
         columns:
           - name: shipment_id
@@ -319,12 +283,6 @@ sources:
       # ---------------------------------------------------------
       - name: returns
         description: "Raw product return transactions associated with order items."
-
-        config:
-          freshness:
-            warn_after: {count: 24, period: hour}
-            error_after: {count: 48, period: hour}
-          loaded_at_field: ingested_at
 
         columns:
           - name: return_id
