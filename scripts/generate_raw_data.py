@@ -52,14 +52,11 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 import random
 
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
+# RANDOM_SEED = 42 means the same random sequence will be generated every time.
 RANDOM_SEED = 42
 
 # Simulated "current" date of the source/warehouse system.
+# (2026, 9, 8, 23, 59, 59) is the same as 2026-09-08 23:59:59.
 DATA_AS_OF = datetime(2026, 9, 8, 23, 59, 59)
 
 CUSTOMER_COUNT = 120
@@ -84,13 +81,10 @@ OUTPUT_FILE = (
     / "03_insert_raw_data.sql"
 )
 
+# random.seed() is used to generate the same random sequence every time.
 random.seed(RANDOM_SEED)
 
-
-# ============================================================
-# REFERENCE DATA
-# ============================================================
-
+# This is a reference data
 FIRST_NAMES = [
     "Aarav",
     "Vivaan",
@@ -264,26 +258,26 @@ RETURN_STATUSES = [
 
 CURRENCY = "INR"
 
-
-# ============================================================
-# HELPER FUNCTIONS
-# ============================================================
-
+# def random_date(start_date: date, end_date: date) -> date: means random_date is a function that takes two arguments, start_date and end_date, and returns a date.
 def random_date(start_date: date, end_date: date) -> date:
     """Return a random date between start_date and end_date."""
 
+    # if start_date > end_date: it means if the start_date is after the end_date, then it will raise an error.
     if start_date > end_date:
         raise ValueError(
             "start_date cannot be after end_date."
         )
 
+    # days is a variable that stores the number of days between start_date and end_date.
     days = (end_date - start_date).days
 
+    # It returns the start date and the number of days between start_date and end_date. It is a random number between 0 and the number of days between start_date and end_date.
     return start_date + timedelta(
         days=random.randint(0, days)
     )
 
-
+# def random_datetime(start_date: date, end_date: date) -> datetime: returns a random datetime between two dates. 
+# The generated datetime will never be later than DATA_AS_OF.
 def random_datetime(
     start_date: date,
     end_date: date,
@@ -309,6 +303,7 @@ def random_datetime(
     minute = random.randint(0, 59)
     second = random.randint(0, 59)
 
+    # Returns a random datetime between two dates.
     generated_datetime = datetime(
         selected_date.year,
         selected_date.month,
@@ -318,6 +313,7 @@ def random_datetime(
         second,
     )
 
+    # The generated datetime will never be later than DATA_AS_OF.
     return min(
         generated_datetime,
         DATA_AS_OF,
@@ -340,8 +336,13 @@ def add_hours_capped(
             "min_hours cannot be greater than max_hours."
         )
 
+    # Generate a random datetime between min hours and max hours.
     generated_datetime = (
+        
+        # base_datetime is the datetime to be modified.
         base_datetime
+        
+        # Add the random number of hours to the base datetime.
         + timedelta(
             hours=random.randint(
                 min_hours,
