@@ -1,4 +1,3 @@
-
 -- ============================================================
 -- E-COMMERCE ANALYTICS
 -- Script: 01_create_database.sql
@@ -11,13 +10,23 @@
 --   3. SILVER  - Cleaned and validated data
 --   4. GOLD    - Analytics-ready reporting models
 --
--- IMPORTANT:
---   - Run this script while connected to an existing database,
---     such as postgres.
---   - PostgreSQL CREATE DATABASE cannot run inside a
---     transaction block.
---   - This script does not create schemas or tables.
+-- EXECUTION REQUIREMENTS:
+--   - Connect to an existing database, such as postgres.
+--   - The executing user must have CREATEDB privileges.
+--   - CREATE DATABASE must run outside a transaction block.
+--   - PostgreSQL does not support CREATE DATABASE IF NOT EXISTS.
+--   - If the target database already exists, do not recreate it.
+--
+-- SAFETY:
+--   - This script does not drop or modify an existing database.
+--   - It does not create schemas or tables.
 --   - Connect to ecommerce_analytics after creation.
 -- ============================================================
 
-CREATE DATABASE ecommerce_analytics;
+-- Check whether the database already exists before executing
+-- this statement. If it exists, skip database creation.
+
+CREATE DATABASE ecommerce_analytics
+    WITH
+        ENCODING = 'UTF8'
+        TEMPLATE = template0;

@@ -1,4 +1,3 @@
-
 -- ============================================================
 -- E-COMMERCE ANALYTICS ENGINEERING
 -- Script: 04_add_ingested_at.sql
@@ -10,9 +9,11 @@
 --
 -- IMPORTANT:
 --   - Connect to ecommerce_analytics before running.
+--   - Run using psql with ON_ERROR_STOP enabled.
 --   - Existing NULL values are backfilled with migration time.
---   - Backfilled values do not represent original ingestion time.
+--   - Backfilled values do not represent original ingestion.
 --   - This migration does not modify business/event timestamps.
+--   - The transaction rolls back if any statement fails.
 -- ============================================================
 
 
@@ -20,11 +21,49 @@
 -- 1. ENSURE THE RAW SCHEMA EXISTS
 -- ============================================================
 
+BEGIN;
+
 CREATE SCHEMA IF NOT EXISTS raw;
 
 
 -- ============================================================
--- 2. ADD COLUMNS ONLY WHEN MISSING
+-- 2. VALIDATE THAT ALL EXPECTED TABLES EXIST
+-- ============================================================
+
+DO $$
+DECLARE
+    missing_tables TEXT;
+BEGIN
+    SELECT STRING_AGG(expected.table_name, ', ' ORDER BY expected.table_name)
+    INTO missing_tables
+    FROM (
+        VALUES
+            ('customers'),
+            ('products'),
+            ('orders'),
+            ('order_items'),
+            ('payments'),
+            ('shipments'),
+            ('returns')
+    ) AS expected(table_name)
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM information_schema.tables AS t
+        WHERE t.table_schema = 'raw'
+          AND t.table_name = expected.table_name
+          AND t.table_type = 'BASE TABLE'
+    );
+
+    IF missing_tables IS NOT NULL THEN
+        RAISE EXCEPTION
+            'Migration stopped. Missing RAW tables: %',
+            missing_tables;
+    END IF;
+END $$;
+
+
+-- ============================================================
+-- 3. ADD INGESTION TIMESTAMP COLUMNS IF MISSING
 -- ============================================================
 
 ALTER TABLE raw.customers
@@ -50,9 +89,10 @@ ALTER TABLE raw.returns
 
 
 -- ============================================================
--- 3. BACKFILL EXISTING NULL VALUES
+-- 4. BACKFILL EXISTING NULL VALUES
 -- ============================================================
--- These values represent migration time, not original ingestion.
+-- CURRENT_TIMESTAMP is stable within the transaction.
+-- Existing non-NULL timestamps are preserved.
 -- ============================================================
 
 UPDATE raw.customers
@@ -85,7 +125,7 @@ WHERE ingested_at IS NULL;
 
 
 -- ============================================================
--- 4. SET DEFAULTS AND REQUIRE NON-NULL VALUES
+-- 5. SET DEFAULTS AND REQUIRE NON-NULL VALUES
 -- ============================================================
 
 ALTER TABLE raw.customers
@@ -118,7 +158,7 @@ ALTER TABLE raw.returns
 
 
 -- ============================================================
--- 5. VALIDATE INGESTION TIMESTAMPS
+-- 6. VALIDATE INGESTION TIMESTAMPS
 -- ============================================================
 
 SELECT
@@ -196,7 +236,7 @@ ORDER BY table_name;
 
 
 -- ============================================================
--- 6. VERIFY COLUMN CONFIGURATION
+-- 7. VERIFY COLUMN CONFIGURATION
 -- ============================================================
 
 SELECT
@@ -209,6 +249,13 @@ FROM information_schema.columns
 WHERE table_schema = 'raw'
   AND column_name = 'ingested_at'
 ORDER BY table_name;
+
+
+-- ============================================================
+-- 8. COMMIT MIGRATION
+-- ============================================================
+
+COMMIT;
 
 
 -- ============================================================

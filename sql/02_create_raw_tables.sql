@@ -1,4 +1,3 @@
-
 -- ============================================================
 -- E-COMMERCE ANALYTICS ENGINEERING
 -- Script: 02_create_raw_tables.sql
@@ -18,21 +17,20 @@
 --   7. raw.returns
 --
 -- Design principles:
---   - Preserve source-oriented column names and types.
---   - Retain primary keys for record identification.
---   - Do not enforce foreign keys in RAW. Referential integrity
---     is validated downstream so invalid or late-arriving
---     relationships can be detected rather than rejected.
---   - Keep business transformations and cleansing in dbt.
+--   - Preserve source-oriented column names and data types.
+--   - Maintain primary keys for record identification.
+--   - Validate referential integrity downstream in dbt.
+--   - Preserve source-quality anomalies in the RAW layer.
+--   - Keep business transformations in dbt.
 --   - Use updated_at for source modification tracking.
 --   - Use ingested_at for warehouse ingestion tracking.
 --
--- IMPORTANT:
---   - Connect to ecommerce_analytics before running this script.
+-- SAFETY:
+--   - Connect to ecommerce_analytics before execution.
 --   - CREATE TABLE IF NOT EXISTS does not modify existing tables.
---   - This script does not drop existing data.
---   - Do not add restrictive quantity or amount checks here:
---     source-quality issues should remain detectable downstream.
+--   - This script does not drop, truncate, or reload data.
+--   - Index creation is safe to rerun.
+--   - Existing table definitions must be checked separately.
 -- ============================================================
 
 
@@ -116,6 +114,10 @@ CREATE TABLE IF NOT EXISTS raw.orders (
 -- ============================================================
 -- 5. ORDER ITEMS
 -- Grain: One row per order line item.
+--
+-- Do not add restrictive quantity or financial CHECK
+-- constraints here. Invalid source records must remain
+-- available for downstream quality checks.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS raw.order_items (
@@ -192,9 +194,10 @@ CREATE TABLE IF NOT EXISTS raw.returns (
 
 
 -- ============================================================
--- 9. INDEXES FOR COMMON JOIN AND FILTER COLUMNS
--- Primary-key indexes are created automatically.
--- These indexes support common downstream joins and queries.
+-- 9. INDEXES
+--
+-- Primary-key and UNIQUE constraints already create indexes.
+-- These additional indexes support common joins and filters.
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id
@@ -226,17 +229,57 @@ CREATE INDEX IF NOT EXISTS idx_returns_return_date
 
 
 -- ============================================================
--- 10. BASIC SCHEMA VALIDATION
--- Returns the tables currently present in the RAW schema.
+-- 10. SCHEMA VALIDATION
+--
+-- Display the expected RAW tables and whether each exists.
+-- This validation does not modify data.
+-- ============================================================
+
+WITH expected_tables (table_name) AS (
+    VALUES
+        ('customers'),
+        ('products'),
+        ('orders'),
+        ('order_items'),
+        ('payments'),
+        ('shipments'),
+        ('returns')
+)
+SELECT
+    'raw' AS table_schema,
+    e.table_name,
+    CASE
+        WHEN t.table_name IS NOT NULL THEN 'PRESENT'
+        ELSE 'MISSING'
+    END AS validation_status
+FROM expected_tables AS e
+LEFT JOIN information_schema.tables AS t
+    ON t.table_schema = 'raw'
+   AND t.table_name = e.table_name
+   AND t.table_type = 'BASE TABLE'
+ORDER BY e.table_name;
+
+
+-- ============================================================
+-- 11. COLUMN VALIDATION
+--
+-- List the actual columns of all RAW tables.
+-- Useful for checking the schema before dbt transformations.
 -- ============================================================
 
 SELECT
     table_schema,
-    table_name
-FROM information_schema.tables
+    table_name,
+    ordinal_position,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns
 WHERE table_schema = 'raw'
-  AND table_type = 'BASE TABLE'
-ORDER BY table_name;
+ORDER BY
+    table_name,
+    ordinal_position;
 
 
 -- ============================================================
