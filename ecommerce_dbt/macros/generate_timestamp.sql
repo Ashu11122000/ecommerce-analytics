@@ -3,17 +3,16 @@
     Macro: generate_timestamp
 
     Purpose:
-    - Return the current database timestamp.
+    - Return PostgreSQL's current transaction timestamp.
     - Provide a reusable timestamp expression for dbt models.
 
     Important:
-    - CURRENT_TIMESTAMP is evaluated by PostgreSQL when the SQL statement
-      executes.
-    - In a view, the value can change when the view is queried.
-    - In a materialized table, the value is stored when the table is built
+    - CURRENT_TIMESTAMP represents the start of the current transaction.
+    - In a view, the expression is evaluated when the view is queried.
+    - In a table, the evaluated value is stored when rows are built
       or refreshed.
-    - This macro does not independently record when a source row was
-      originally ingested or updated.
+    - This macro does not record source ingestion or source update time.
+    - This macro does not independently record model execution history.
 #}
 
 {% macro generate_timestamp() %}

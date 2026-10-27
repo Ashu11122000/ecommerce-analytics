@@ -4,14 +4,17 @@
 
     Purpose:
     - Provide a reusable timestamp expression for Silver-layer models.
-    - Record the timestamp associated with executing the transformation SQL.
+    - Record the current PostgreSQL transaction timestamp.
 
     Important:
-    - CURRENT_TIMESTAMP returns PostgreSQL's current transaction timestamp.
-    - For a view, the timestamp may change whenever the view is queried.
-    - For a materialized table, the value is stored when the table is built
+    - CURRENT_TIMESTAMP returns the start time of the current
+      database transaction.
+    - In a view, the expression is evaluated when the view is queried.
+    - In a table, the evaluated value is stored when rows are built
       or refreshed.
-    - This timestamp does not represent the original source update time.
+    - This timestamp is not the source record's update timestamp.
+    - This macro generates an expression only; it does not configure
+      model materialization or control when a model is refreshed.
 #}
 
 {% macro transformed_timestamp() %}
