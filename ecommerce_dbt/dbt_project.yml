@@ -1,29 +1,55 @@
+
+# ============================================================
+# E-COMMERCE ANALYTICS ENGINEERING
+# dbt project configuration
+# ============================================================
+
 name: "ecommerce_dbt"
 version: "1.0.0"
 config-version: 2
 
 profile: "ecommerce_dbt"
 
+# Project directories
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
+seed-paths: ["seeds"]
 macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
 
+# Files and directories removed by `dbt clean`
 clean-targets:
   - "target"
   - "dbt_packages"
 
+# ============================================================
+# MODEL CONFIGURATION
+# ============================================================
+
 models:
   ecommerce_dbt:
 
+    # --------------------------------------------------------
+    # BRONZE: Source-aligned data with minimal transformations
+    # --------------------------------------------------------
     bronze:
       +schema: bronze
       +materialized: view
+      +tags: ["bronze"]
 
+    # --------------------------------------------------------
+    # SILVER: Cleaned, standardized, validated data
+    # --------------------------------------------------------
     silver:
       +schema: silver
       +materialized: view
+      +tags: ["silver"]
 
+    # --------------------------------------------------------
+    # GOLD: Analytics-ready facts and dimensions
+    # --------------------------------------------------------
     gold:
       +schema: gold
       +materialized: table
+      +tags: ["gold"]

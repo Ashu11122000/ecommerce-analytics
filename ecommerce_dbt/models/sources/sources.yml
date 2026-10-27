@@ -2,10 +2,16 @@ version: 2
 
 sources:
   - name: raw
-    description: "Raw e-commerce source data loaded into PostgreSQL."
+    description: >
+      Raw e-commerce source data loaded into PostgreSQL.
+      These tables represent operational entities before
+      Bronze, Silver, and Gold transformations.
+
+    schema: raw
 
     config:
       tags: ["raw", "source"]
+      loaded_at_field: ingested_at
       freshness:
         warn_after:
           count: 24
@@ -13,210 +19,430 @@ sources:
         error_after:
           count: 48
           period: hour
-      loaded_at_field: ingested_at
 
     tables:
-
+      # ------------------------------------------------------
+      # CUSTOMERS
+      # Grain: One row per customer.
+      # ------------------------------------------------------
       - name: customers
         description: "Raw customer records."
         config:
           tags: ["raw", "customer"]
+
         columns:
           - name: customer_id
             description: "Unique customer identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: customer_name
             description: "Customer full name."
+            data_tests:
+              - not_null
+
           - name: email
             description: "Customer email address."
+            data_tests:
+              - unique
+              - not_null
+
           - name: phone
             description: "Customer phone number."
+
           - name: gender
             description: "Customer gender."
+
           - name: date_of_birth
             description: "Customer date of birth."
+
           - name: city
             description: "Customer city."
+
           - name: state
             description: "Customer state."
+
           - name: country
             description: "Customer country."
+
           - name: postal_code
             description: "Customer postal code."
+
           - name: customer_segment
             description: "Customer segment."
+
           - name: customer_status
             description: "Customer status."
+
           - name: signup_date
             description: "Customer signup date."
-          - name: updated_at
-            description: "Timestamp when the record was last updated."
-          - name: ingested_at
-            description: "Timestamp when the record was ingested."
+            data_tests:
+              - not_null
 
+          - name: updated_at
+            description: "Timestamp when the source record was last updated."
+
+          - name: ingested_at
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
+
+      # ------------------------------------------------------
+      # PRODUCTS
+      # Grain: One row per product.
+      # ------------------------------------------------------
       - name: products
         description: "Raw product records."
         config:
           tags: ["raw", "product"]
+
         columns:
           - name: product_id
             description: "Unique product identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: product_name
             description: "Product name."
+            data_tests:
+              - not_null
+
           - name: category
             description: "Product category."
+            data_tests:
+              - not_null
+
           - name: subcategory
             description: "Product subcategory."
+
           - name: brand
             description: "Product brand."
+
+          - name: supplier_id
+            description: "Supplier identifier from the source system."
+
           - name: cost_price
             description: "Product cost price."
+
           - name: selling_price
             description: "Product selling price."
+
           - name: stock_quantity
             description: "Available stock quantity."
+
           - name: reorder_level
             description: "Stock reorder threshold."
+
           - name: product_status
             description: "Product status."
+
           - name: launch_date
             description: "Product launch date."
-          - name: updated_at
-            description: "Timestamp when the record was last updated."
-          - name: ingested_at
-            description: "Timestamp when the record was ingested."
 
+          - name: updated_at
+            description: "Timestamp when the source record was last updated."
+
+          - name: ingested_at
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
+
+      # ------------------------------------------------------
+      # ORDERS
+      # Grain: One row per order.
+      # ------------------------------------------------------
       - name: orders
         description: "Raw customer order records."
         config:
           tags: ["raw", "transaction", "order"]
+
         columns:
           - name: order_id
             description: "Unique order identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: customer_id
             description: "Customer who placed the order."
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'customers')
+                    field: customer_id
+
           - name: order_date
             description: "Order creation timestamp."
-          - name: order_status
-            description: "Order status."
-          - name: payment_status
-            description: "Payment status."
-          - name: shipping_method
-            description: "Shipping method."
-          - name: shipping_cost
-            description: "Shipping cost."
-          - name: discount_amount
-            description: "Discount applied to the order."
-          - name: tax_amount
-            description: "Tax amount."
-          - name: total_amount
-            description: "Total order amount."
-          - name: sales_channel
-            description: "Sales channel."
-          - name: currency
-            description: "Order currency."
-          - name: updated_at
-            description: "Timestamp when the record was last updated."
-          - name: ingested_at
-            description: "Timestamp when the record was ingested."
+            data_tests:
+              - not_null
 
+          - name: order_status
+            description: "Current order status."
+            data_tests:
+              - not_null
+
+          - name: payment_status
+            description: "Payment status associated with the order."
+
+          - name: shipping_method
+            description: "Shipping method selected for the order."
+
+          - name: shipping_cost
+            description: "Shipping cost recorded for the order."
+
+          - name: discount_amount
+            description: "Discount applied at order level."
+
+          - name: tax_amount
+            description: "Tax amount recorded at order level."
+
+          - name: total_amount
+            description: "Total order amount recorded by the source."
+
+          - name: sales_channel
+            description: "Channel through which the order was placed."
+
+          - name: currency
+            description: "Currency of the order amounts."
+
+          - name: updated_at
+            description: "Timestamp when the source record was last updated."
+
+          - name: ingested_at
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
+
+      # ------------------------------------------------------
+      # ORDER ITEMS
+      # Grain: One row per order line item.
+      # ------------------------------------------------------
       - name: order_items
         description: "Raw order line-item records."
         config:
-          tags: ["raw", "transaction", "order_item", "incremental"]
+          tags: ["raw", "transaction", "order_item"]
+
         columns:
           - name: order_item_id
             description: "Unique order item identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: order_id
-            description: "Order identifier."
+            description: "Order associated with this line item."
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'orders')
+                    field: order_id
+
           - name: product_id
-            description: "Product identifier."
+            description: "Product associated with this line item."
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'products')
+                    field: product_id
+
           - name: quantity
             description: "Quantity ordered."
+
           - name: unit_price
-            description: "Unit selling price."
+            description: "Unit selling price recorded for the line item."
+
           - name: discount_amount
             description: "Discount applied to the line item."
-          - name: tax_amount
-            description: "Tax amount for the line item."
-          - name: line_total
-            description: "Total value of the line item."
-          - name: returned_quantity
-            description: "Quantity returned."
-          - name: updated_at
-            description: "Timestamp when the record was last updated."
-          - name: ingested_at
-            description: "Timestamp when the record was ingested."
 
+          - name: tax_amount
+            description: "Tax amount recorded for the line item."
+
+          - name: line_total
+            description: "Line total recorded by the source."
+
+          - name: returned_quantity
+            description: "Returned quantity recorded on the order item."
+
+          - name: updated_at
+            description: "Timestamp when the source record was last updated."
+
+          - name: ingested_at
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
+
+      # ------------------------------------------------------
+      # PAYMENTS
+      # Grain: One row per payment transaction.
+      # An order can have multiple payment records.
+      # ------------------------------------------------------
       - name: payments
         description: "Raw payment transaction records."
         config:
           tags: ["raw", "transaction", "payment"]
+
         columns:
           - name: payment_id
             description: "Unique payment identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: order_id
             description: "Order associated with the payment."
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'orders')
+                    field: order_id
+
           - name: payment_date
-            description: "Payment timestamp."
+            description: "Payment transaction timestamp."
+            data_tests:
+              - not_null
+
           - name: payment_method
             description: "Payment method."
+            data_tests:
+              - not_null
+
           - name: payment_status
-            description: "Payment status."
+            description: "Payment transaction status."
+            data_tests:
+              - not_null
+
           - name: amount
-            description: "Payment amount."
+            description: "Amount recorded for the payment."
+            data_tests:
+              - not_null
+
           - name: transaction_reference
             description: "Payment transaction reference."
-          - name: updated_at
-            description: "Timestamp when the record was last updated."
-          - name: ingested_at
-            description: "Timestamp when the record was ingested."
 
+          - name: updated_at
+            description: "Timestamp when the source record was last updated."
+
+          - name: ingested_at
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
+
+      # ------------------------------------------------------
+      # SHIPMENTS
+      # Grain: One row per shipment.
+      # ------------------------------------------------------
       - name: shipments
         description: "Raw shipment records."
         config:
           tags: ["raw", "transaction", "shipment"]
+
         columns:
           - name: shipment_id
             description: "Unique shipment identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: order_id
             description: "Order associated with the shipment."
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'orders')
+                    field: order_id
+
           - name: shipping_method
-            description: "Shipping method."
+            description: "Shipping method used."
+            data_tests:
+              - not_null
+
           - name: shipment_status
-            description: "Shipment status."
+            description: "Current shipment status."
+            data_tests:
+              - not_null
+
           - name: shipped_at
             description: "Shipment dispatch timestamp."
+
           - name: delivered_at
             description: "Shipment delivery timestamp."
+
           - name: delivery_city
             description: "Delivery city."
+
           - name: delivery_state
             description: "Delivery state."
-          - name: updated_at
-            description: "Timestamp when the record was last updated."
-          - name: ingested_at
-            description: "Timestamp when the record was ingested."
 
+          - name: updated_at
+            description: "Timestamp when the source record was last updated."
+
+          - name: ingested_at
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
+
+      # ------------------------------------------------------
+      # RETURNS
+      # Grain: One row per return record.
+      # An order item may have multiple return records.
+      # ------------------------------------------------------
       - name: returns
         description: "Raw product return records."
         config:
           tags: ["raw", "transaction", "return"]
+
         columns:
           - name: return_id
             description: "Unique return identifier."
+            data_tests:
+              - unique
+              - not_null
+
           - name: order_item_id
             description: "Order item associated with the return."
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'order_items')
+                    field: order_item_id
+
           - name: return_date
-            description: "Return timestamp."
+            description: "Return request or processing timestamp, as recorded."
+            data_tests:
+              - not_null
+
           - name: return_reason
-            description: "Reason for the return."
+            description: "Reason recorded for the return."
+            data_tests:
+              - not_null
+
           - name: return_quantity
-            description: "Quantity returned."
+            description: "Quantity associated with the return record."
+            data_tests:
+              - not_null
+
           - name: refund_amount
-            description: "Refund amount."
+            description: "Refund amount recorded for the return."
+            data_tests:
+              - not_null
+
           - name: return_status
-            description: "Return status."
+            description: "Return workflow status."
+            data_tests:
+              - not_null
+
           - name: updated_at
-            description: "Timestamp when the record was last updated."
+            description: "Timestamp when the source record was last updated."
+
           - name: ingested_at
-            description: "Timestamp when the record was ingested."
+            description: "Timestamp when the record entered the RAW layer."
+            data_tests:
+              - not_null
