@@ -1,16 +1,25 @@
-
 # ============================================================
 # E-COMMERCE ANALYTICS ENGINEERING
-# dbt project configuration
+# File: ecommerce_dbt/dbt_project.yml
+# Purpose: Main dbt project configuration
 # ============================================================
+
+# ------------------------------------------------------------
+# PROJECT SETTINGS
+# ------------------------------------------------------------
 
 name: "ecommerce_dbt"
 version: "1.0.0"
 config-version: 2
 
+# Must match the profile name in your profiles.yml file.
 profile: "ecommerce_dbt"
 
-# Project directories
+# ------------------------------------------------------------
+# PROJECT DIRECTORY PATHS
+# Keep these aligned with your existing folder structure.
+# ------------------------------------------------------------
+
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
@@ -18,38 +27,74 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-# Files and directories removed by `dbt clean`
+# ------------------------------------------------------------
+# CLEAN TARGETS
+# Directories removed by `dbt clean`.
+# This does not delete your source SQL files.
+# ------------------------------------------------------------
+
 clean-targets:
   - "target"
   - "dbt_packages"
 
-# ============================================================
+# ------------------------------------------------------------
 # MODEL CONFIGURATION
-# ============================================================
+# These settings apply to models under models/.
+#
+# Note:
+# The schema names generated in PostgreSQL also depend on
+# the target schema in profiles.yml and dbt's schema naming
+# behavior. Verify the actual destination schemas before
+# running a full build.
+# ------------------------------------------------------------
 
 models:
   ecommerce_dbt:
+    # ========================================================
+    # BRONZE LAYER
+    # Purpose:
+    # - Read from the raw source tables.
+    # - Apply light standardization.
+    # - Preserve source-level business information.
+    #
+    # Materialization: VIEW
+    # ========================================================
 
-    # --------------------------------------------------------
-    # BRONZE: Source-aligned data with minimal transformations
-    # --------------------------------------------------------
     bronze:
       +schema: bronze
       +materialized: view
-      +tags: ["bronze"]
+      +tags:
+        - bronze
 
-    # --------------------------------------------------------
-    # SILVER: Cleaned, standardized, validated data
-    # --------------------------------------------------------
+    # ========================================================
+    # SILVER LAYER
+    # Purpose:
+    # - Clean and standardize data.
+    # - Derive reusable business attributes.
+    # - Flag data quality issues.
+    #
+    # Materialization: VIEW
+    # ========================================================
+
     silver:
       +schema: silver
       +materialized: view
-      +tags: ["silver"]
+      +tags:
+        - silver
 
-    # --------------------------------------------------------
-    # GOLD: Analytics-ready facts and dimensions
-    # --------------------------------------------------------
+    # ========================================================
+    # GOLD LAYER
+    # Purpose:
+    # - Provide analytics-ready dimensions and fact tables.
+    # - Support consistent reporting and dashboards.
+    #
+    # Materialization: TABLE
+    # Applies to models in gold/ and its subdirectories,
+    # including gold/dimensions/ and gold/facts/.
+    # ========================================================
+
     gold:
       +schema: gold
       +materialized: table
-      +tags: ["gold"]
+      +tags:
+        - gold

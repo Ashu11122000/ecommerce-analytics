@@ -2,31 +2,39 @@
 -- ============================================================
 -- Model: dim_date
 -- Layer: Gold
+-- Grain: One row per calendar date (full_date)
+--
 -- Purpose:
 --   Create a reusable date dimension for time-based analytics.
---   Provide calendar attributes for filtering, grouping, and
---   comparing business metrics across dates and periods.
---
--- Grain:
---   One row per calendar date (full_date).
+--   Support filtering, grouping, period comparisons, and
+--   time-series reporting across business metrics.
 --
 -- Source:
 --   silver_orders
 --
+-- Transformations:
+--   1. Derive date boundaries from available order dates.
+--   2. Generate every calendar date between those boundaries.
+--   3. Create a YYYYMMDD integer date key.
+--   4. Add calendar, week, month, quarter, and weekend attributes.
+--   5. Add a Gold modeling timestamp.
+--
 -- Important assumptions:
---   1. The date range is based on the minimum and maximum
---      order dates currently available in silver_orders.
---   2. The calendar includes every date between these boundaries.
---   3. Week numbering follows PostgreSQL's week-of-year convention.
---   4. Day-of-week numbering uses PostgreSQL DOW:
---      Sunday = 0, Monday = 1, ..., Saturday = 6.
---   5. The date key uses YYYYMMDD format.
+--   - The date range is based on order dates currently available.
+--   - The calendar includes both boundary dates.
+--   - Week numbering follows PostgreSQL's EXTRACT(WEEK) convention,
+--     which uses ISO week numbering.
+--   - day_of_week follows PostgreSQL DOW:
+--     Sunday = 0, Monday = 1, ..., Saturday = 6.
+--   - is_weekend identifies Saturday and Sunday.
+--   - This model does not generate dates when no valid order dates
+--     are available.
 -- ============================================================
 
 WITH date_range AS (
 
-    -- Step 1: Determine the date boundaries from available orders.
-    -- Cast timestamps to DATE so the calendar uses whole days.
+    -- Step 1: Find the earliest and latest available order dates.
+    -- Casting to DATE removes the time portion of timestamps.
     SELECT
         MIN(order_date::DATE) AS min_date,
         MAX(order_date::DATE) AS max_date
@@ -37,8 +45,8 @@ WITH date_range AS (
 
 date_series AS (
 
-    -- Step 2: Generate one calendar date per day between
-    -- the earliest and latest order dates, inclusive.
+    -- Step 2: Generate one row per calendar day, inclusive
+    -- of the minimum and maximum order dates.
     SELECT
         GENERATE_SERIES(
             min_date,
@@ -48,56 +56,58 @@ date_series AS (
 
     FROM date_range
 
-    -- Avoid generating dates if the source has no valid orders.
+    -- Guard against empty source data or missing order dates.
     WHERE min_date IS NOT NULL
       AND max_date IS NOT NULL
+      AND min_date <= max_date
 
 )
 
--- Step 3: Build the final date dimension with calendar attributes.
+-- Step 3: Add reusable calendar attributes to each date.
 SELECT
 
-    -- Surrogate date key in YYYYMMDD format.
+    -- Integer date key in YYYYMMDD format.
     -- Example: 20261027 represents October 27, 2026.
     TO_CHAR(date_day, 'YYYYMMDD')::INTEGER AS date_key,
 
-    -- Full calendar date used for joins and time-series analysis.
+    -- Full date for joins and time-based analysis.
     date_day AS full_date,
 
     -- Calendar year.
     EXTRACT(YEAR FROM date_day)::INTEGER AS year,
 
-    -- Calendar quarter, numbered from 1 through 4.
+    -- Calendar quarter: 1, 2, 3, or 4.
     EXTRACT(QUARTER FROM date_day)::INTEGER AS quarter,
 
-    -- Calendar month, numbered from 1 through 12.
+    -- Calendar month: 1 through 12.
     EXTRACT(MONTH FROM date_day)::INTEGER AS month,
 
-    -- Month name without padded spaces.
+    -- Month name without PostgreSQL's trailing padding.
     TRIM(TO_CHAR(date_day, 'Month')) AS month_name,
 
-    -- Week number according to PostgreSQL's week convention.
-    -- Week numbering may cross calendar-year boundaries.
+    -- ISO week number (1 through 53).
+    -- The ISO week-year can differ from the calendar year
+    -- near the beginning and end of a calendar year.
     EXTRACT(WEEK FROM date_day)::INTEGER AS week_of_year,
 
-    -- Day of the calendar month, numbered from 1 through 31.
+    -- Day of the calendar month: 1 through 31.
     EXTRACT(DAY FROM date_day)::INTEGER AS day_of_month,
 
-    -- Day of the week using PostgreSQL DOW:
+    -- PostgreSQL DOW numbering:
     -- Sunday = 0, Monday = 1, ..., Saturday = 6.
     EXTRACT(DOW FROM date_day)::INTEGER AS day_of_week,
 
-    -- Day name without padded spaces.
+    -- Day name without trailing padding.
     TRIM(TO_CHAR(date_day, 'Day')) AS day_name,
 
-    -- Identify Saturdays and Sundays as weekends.
+    -- Saturday and Sunday are classified as weekends.
     CASE
         WHEN EXTRACT(ISODOW FROM date_day) IN (6, 7)
             THEN TRUE
         ELSE FALSE
     END AS is_weekend,
 
-    -- Identify the final calendar day of each month.
+    -- True for the final calendar date of each month.
     CASE
         WHEN date_day = (
             DATE_TRUNC('month', date_day)
@@ -108,18 +118,18 @@ SELECT
         ELSE FALSE
     END AS is_month_end,
 
-    -- Create a readable quarter label, such as Q3-2026.
+    -- Readable quarter label, such as Q3-2026.
     'Q'
         || EXTRACT(QUARTER FROM date_day)::INTEGER
         || '-'
         || EXTRACT(YEAR FROM date_day)::INTEGER
         AS quarter_label,
 
-    -- Create a sortable month label, such as 2026-10.
+    -- Sortable month label, such as 2026-10.
     TO_CHAR(date_day, 'YYYY-MM') AS month_label,
 
-    -- Timestamp generated by the modeled_timestamp macro.
-    -- Its behavior depends on the macro implementation.
+    -- Gold modeling timestamp.
+    -- Persistence depends on the macro and materialization.
     {{ modeled_timestamp() }} AS modeled_at
 
 FROM date_series

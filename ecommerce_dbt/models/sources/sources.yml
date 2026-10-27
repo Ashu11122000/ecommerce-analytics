@@ -1,16 +1,24 @@
+# ============================================================
+# E-COMMERCE ANALYTICS ENGINEERING
+# File: models/sources/sources.yml
+# Purpose: Define raw PostgreSQL sources for dbt
+# ============================================================
+
 version: 2
 
 sources:
   - name: raw
     description: >
       Raw e-commerce source data loaded into PostgreSQL.
-      These tables represent operational entities before
-      Bronze, Silver, and Gold transformations.
+      These operational tables are the foundation for the
+      Bronze, Silver, and Gold transformation layers.
 
     schema: raw
 
+    # Source freshness is measured using ingested_at.
+    # Warning threshold: 24 hours.
+    # Error threshold: 48 hours.
     config:
-      tags: ["raw", "source"]
       loaded_at_field: ingested_at
       freshness:
         warn_after:
@@ -19,16 +27,20 @@ sources:
         error_after:
           count: 48
           period: hour
+      tags:
+        - raw
+        - source
 
     tables:
-      # ------------------------------------------------------
+      # ======================================================
       # CUSTOMERS
       # Grain: One row per customer.
-      # ------------------------------------------------------
+      # ======================================================
+
       - name: customers
         description: "Raw customer records."
         config:
-          tags: ["raw", "customer"]
+          tags: [raw, customer]
 
         columns:
           - name: customer_id
@@ -45,8 +57,8 @@ sources:
           - name: email
             description: "Customer email address."
             data_tests:
-              - unique
               - not_null
+              - unique
 
           - name: phone
             description: "Customer phone number."
@@ -84,18 +96,19 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null
 
-      # ------------------------------------------------------
+      # ======================================================
       # PRODUCTS
       # Grain: One row per product.
-      # ------------------------------------------------------
+      # ======================================================
+
       - name: products
         description: "Raw product records."
         config:
-          tags: ["raw", "product"]
+          tags: [raw, product]
 
         columns:
           - name: product_id
@@ -145,18 +158,19 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null
 
-      # ------------------------------------------------------
+      # ======================================================
       # ORDERS
       # Grain: One row per order.
-      # ------------------------------------------------------
+      # ======================================================
+
       - name: orders
         description: "Raw customer order records."
         config:
-          tags: ["raw", "transaction", "order"]
+          tags: [raw, transaction, order]
 
         columns:
           - name: order_id
@@ -212,18 +226,19 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null
 
-      # ------------------------------------------------------
+      # ======================================================
       # ORDER ITEMS
       # Grain: One row per order line item.
-      # ------------------------------------------------------
+      # ======================================================
+
       - name: order_items
         description: "Raw order line-item records."
         config:
-          tags: ["raw", "transaction", "order_item"]
+          tags: [raw, transaction, order_item]
 
         columns:
           - name: order_item_id
@@ -272,19 +287,20 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null
 
-      # ------------------------------------------------------
+      # ======================================================
       # PAYMENTS
       # Grain: One row per payment transaction.
-      # An order can have multiple payment records.
-      # ------------------------------------------------------
+      # An order may have multiple payment records.
+      # ======================================================
+
       - name: payments
         description: "Raw payment transaction records."
         config:
-          tags: ["raw", "transaction", "payment"]
+          tags: [raw, transaction, payment]
 
         columns:
           - name: payment_id
@@ -329,18 +345,19 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null
 
-      # ------------------------------------------------------
+      # ======================================================
       # SHIPMENTS
       # Grain: One row per shipment.
-      # ------------------------------------------------------
+      # ======================================================
+
       - name: shipments
         description: "Raw shipment records."
         config:
-          tags: ["raw", "transaction", "shipment"]
+          tags: [raw, transaction, shipment]
 
         columns:
           - name: shipment_id
@@ -384,19 +401,20 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null
 
-      # ------------------------------------------------------
+      # ======================================================
       # RETURNS
       # Grain: One row per return record.
       # An order item may have multiple return records.
-      # ------------------------------------------------------
+      # ======================================================
+
       - name: returns
         description: "Raw product return records."
         config:
-          tags: ["raw", "transaction", "return"]
+          tags: [raw, transaction, return]
 
         columns:
           - name: return_id
@@ -415,7 +433,7 @@ sources:
                     field: order_item_id
 
           - name: return_date
-            description: "Return request or processing timestamp, as recorded."
+            description: "Return request or processing timestamp as recorded."
             data_tests:
               - not_null
 
@@ -443,6 +461,6 @@ sources:
             description: "Timestamp when the source record was last updated."
 
           - name: ingested_at
-            description: "Timestamp when the record entered the RAW layer."
+            description: "Timestamp when the record entered the raw layer."
             data_tests:
               - not_null

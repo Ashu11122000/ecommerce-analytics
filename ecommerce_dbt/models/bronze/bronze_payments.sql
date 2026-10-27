@@ -5,27 +5,50 @@
 -- Grain: One row per source payment transaction (payment_id)
 --
 -- Purpose:
---   Standardize payment attributes while retaining the
---   source structure for downstream Silver and Gold models.
+--   Standardize payment attributes while retaining the source
+--   structure for downstream Silver and Gold transformations.
 --
--- Important:
---   - An order can have multiple payment transactions.
---   - Do not aggregate payments at order level in Bronze.
---   - Preserve the original amount for financial validation.
---   - Blank optional text values are converted to NULL.
---   - Payment status rules are applied downstream.
+-- Transformations:
+--   1. Preserve payment and order identifiers.
+--   2. Standardize payment method and status capitalization.
+--   3. Convert blank transaction references to NULL.
+--   4. Preserve the original payment amount for validation.
+--   5. Retain source timestamps for lineage.
+--   6. Add a model execution timestamp.
+--
+-- Important assumptions:
+--   - An order may have multiple payment transactions.
+--   - No joins or aggregations are performed in Bronze.
+--   - Payment amounts are not defaulted or modified.
+--   - Payment status rules and financial reconciliation are
+--     handled downstream.
+--   - loaded_at is query execution time because this model
+--     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT
+    -- Payment transaction and order identifiers
     payment_id,
     order_id,
+
+    -- Payment date
     payment_date,
+
+    -- Standardized payment attributes
     NULLIF(INITCAP(TRIM(payment_method)), '') AS payment_method,
     NULLIF(INITCAP(TRIM(payment_status)), '') AS payment_status,
+
+    -- Preserve the original amount for financial validation
     amount,
+
+    -- Normalize blank transaction references to NULL
     NULLIF(TRIM(transaction_reference), '') AS transaction_reference,
+
+    -- Source audit timestamps
     updated_at,
     ingested_at,
+
+    -- Model execution timestamp
     CURRENT_TIMESTAMP AS loaded_at
 
 FROM {{ source('raw', 'payments') }}

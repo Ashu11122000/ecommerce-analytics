@@ -2,29 +2,45 @@
 -- ============================================================
 -- Model: dim_products
 -- Layer: Gold
--- Purpose:
---   Create a business-friendly product dimension for analytics.
---   Provide product attributes, profitability classifications,
---   pricing bands, and inventory information for dashboards.
+-- Grain: One row per product (product_id)
 --
--- Grain:
---   One row per product (product_id).
+-- Purpose:
+--   Provide a business-friendly product dimension for analytics.
+--   Support product performance, pricing, profitability, and
+--   inventory analysis in dashboards and the semantic layer.
 --
 -- Source:
 --   silver_products
 --
+-- Business definitions:
+--   profit_amount:
+--     Expected profit per unit = selling_price - cost_price.
+--     This is not realized profit from completed sales.
+--
+--   profit_margin_pct:
+--     Expected unit profit as a percentage of selling price.
+--     The calculation and invalid-price handling are inherited
+--     from silver_products.
+--
+--   profit_margin_band:
+--     Unknown       : Margin is unavailable.
+--     Low Margin    : Margin < 10%.
+--     Medium Margin : Margin >= 10% and < 30%.
+--     High Margin   : Margin >= 30% and < 50%.
+--     Very High Margin: Margin >= 50%.
+--
 -- Important assumptions:
---   1. Profit amount represents expected profit per unit,
---      not realized profit from completed sales.
---   2. Profit margin is calculated as a percentage of selling price.
---   3. Margin bands use fixed percentage thresholds.
---   4. Stock status is inherited from the Silver model.
+--   - Margin thresholds are fixed business classifications.
+--   - Stock status and price band are inherited from Silver.
+--   - Negative margins are retained and classified as Low Margin
+--     under the current threshold rules.
+--   - One product should produce exactly one Gold dimension row.
 -- ============================================================
 
 WITH product_dimension AS (
 
-    -- Step 1: Select product attributes and calculated metrics
-    -- from the Silver layer.
+    -- Step 1: Select descriptive product attributes, pricing,
+    -- profitability, inventory, and lineage from the Silver layer.
     SELECT
         product_id,
         product_name,
@@ -53,13 +69,10 @@ WITH product_dimension AS (
 
 products_classified AS (
 
-    -- Step 2: Classify products according to their expected
-    -- unit profit margin.
+    -- Step 2: Assign a business-friendly profit margin band.
     SELECT
         *,
 
-        -- Group profit margins into business-friendly bands.
-        -- A margin below 10% is classified as Low Margin.
         CASE
             WHEN profit_margin_pct IS NULL
                 THEN 'Unknown'
@@ -82,6 +95,7 @@ products_classified AS (
 
 -- Step 3: Return the final Gold product dimension.
 SELECT
+
     -- Product identifiers and descriptive attributes.
     product_id,
     product_name,
@@ -97,15 +111,15 @@ SELECT
     profit_margin_pct,
     profit_margin_band,
 
-    -- Inventory attributes for stock monitoring.
+    -- Inventory monitoring attributes.
     stock_quantity,
     reorder_level,
     stock_status,
 
-    -- Product pricing classification.
+    -- Pricing classification inherited from Silver.
     price_band,
 
-    -- Product availability and lifecycle attributes.
+    -- Product status and lifecycle attributes.
     product_status,
     is_active_product,
     launch_date,
@@ -115,8 +129,9 @@ SELECT
     loaded_at,
     transformed_at,
 
-    -- Record when this Gold model's transformation executes.
-    -- Behavior depends on the modeled_timestamp() macro.
+    -- Gold model execution timestamp.
+    -- Exact behavior depends on the macro implementation
+    -- and the model's materialization.
     {{ modeled_timestamp() }} AS modeled_at
 
 FROM products_classified

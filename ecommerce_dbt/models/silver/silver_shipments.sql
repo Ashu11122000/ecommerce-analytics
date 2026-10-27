@@ -2,35 +2,50 @@
 -- ============================================================
 -- Model: silver_shipments
 -- Layer: Silver
+-- Grain: One row per shipment (shipment_id)
+--
 -- Purpose:
 --   Enrich shipment data from the Bronze layer with delivery
 --   duration metrics, standardized shipment statuses, delivery
 --   speed classifications, and delay indicators.
 --
--- Grain:
---   One row per shipment (shipment_id).
+-- Transformations:
+--   1. Calculate elapsed delivery duration in fractional days.
+--   2. Identify shipments with a recorded delivery timestamp.
+--   3. Standardize shipment statuses into reporting categories.
+--   4. Classify delivery speed using elapsed duration.
+--   5. Flag deliveries taking more than five days.
+--   6. Preserve source lineage and add a transformation timestamp.
 --
 -- Important assumptions:
---   1. Delivery duration is measured in elapsed calendar days.
---   2. A non-null delivered_at timestamp indicates delivery.
---   3. Delivery within 2 days is classified as Fast.
---   4. Delivery within 5 days is classified as Standard.
---   5. Delivery taking more than 5 days is classified as Slow
---      and flagged as delayed.
+--   - Delivery duration is measured in elapsed time, expressed in days.
+--   - A non-null delivered_at timestamp indicates recorded delivery.
+--   - Delivery within 2 days is classified as Fast.
+--   - Delivery within 5 days is classified as Standard.
+--   - Delivery taking more than 5 days is classified as Slow
+--     and flagged as delayed.
+--   - Negative delivery durations are invalid and are not classified
+--     as delayed.
 -- ============================================================
 
 WITH shipments_base AS (
 
     -- Step 1: Select shipment attributes from the Bronze model.
+    -- Preserve the shipment-level grain without joins or aggregation.
     SELECT
+        -- Shipment and order identifiers
         shipment_id,
         order_id,
+
+        -- Source shipment attributes
         shipping_method,
         shipment_status,
         shipped_at,
         delivered_at,
         delivery_city,
         delivery_state,
+
+        -- Source lineage
         updated_at,
         ingested_at,
         loaded_at
@@ -45,12 +60,11 @@ shipments_enriched AS (
     SELECT
         *,
 
-        -- Calculate the total elapsed duration in days.
-        -- Casting the interval to a numeric number of seconds
-        -- and dividing by 86,400 preserves fractional days.
+        -- Calculate elapsed delivery duration in fractional days.
+        -- Negative values are retained here for anomaly detection.
         CASE
             WHEN shipped_at IS NOT NULL
-                AND delivered_at IS NOT NULL
+                 AND delivered_at IS NOT NULL
             THEN ROUND(
                 (
                     EXTRACT(EPOCH FROM (delivered_at - shipped_at))
@@ -61,15 +75,15 @@ shipments_enriched AS (
             ELSE NULL
         END AS delivery_days,
 
-        -- Identify shipments with a recorded delivery timestamp.
-        -- This uses the timestamp rather than shipment_status.
+        -- A recorded delivery timestamp indicates delivery
+        -- according to this model's definition.
         CASE
             WHEN delivered_at IS NOT NULL THEN TRUE
             ELSE FALSE
         END AS is_delivered,
 
         -- Standardize shipment statuses for reporting.
-        -- Trim spaces and ignore differences in letter case.
+        -- Comparisons ignore surrounding spaces and letter case.
         CASE
             WHEN LOWER(TRIM(shipment_status)) IN (
                 'delivered',
@@ -97,19 +111,19 @@ shipments_enriched AS (
             )
                 THEN 'Cancelled'
 
-            -- Keep missing statuses distinct from other values.
+            -- Distinguish missing statuses from unrecognized values.
             WHEN shipment_status IS NULL
-                OR TRIM(shipment_status) = ''
+                 OR TRIM(shipment_status) = ''
                 THEN 'Unknown'
 
             ELSE 'Other'
         END AS shipment_status_group,
 
         -- Classify delivery speed using elapsed duration.
-        -- Negative durations are invalid and classified separately.
+        -- Negative durations are invalid and are classified separately.
         CASE
             WHEN shipped_at IS NULL
-                OR delivered_at IS NULL
+                 OR delivered_at IS NULL
                 THEN 'Unknown'
 
             WHEN delivered_at < shipped_at
@@ -124,12 +138,11 @@ shipments_enriched AS (
             ELSE 'Slow'
         END AS delivery_speed,
 
-        -- Flag completed deliveries taking more than five days.
-        -- Missing timestamps do not provide enough evidence to
-        -- determine whether delivery was delayed.
+        -- Flag completed deliveries taking more than five elapsed days.
+        -- Missing or reversed timestamps do not establish a valid delay.
         CASE
             WHEN shipped_at IS NULL
-                OR delivered_at IS NULL
+                 OR delivered_at IS NULL
                 THEN NULL
 
             WHEN delivered_at < shipped_at
@@ -147,7 +160,7 @@ shipments_enriched AS (
 
 -- Step 3: Return the final enriched Silver shipment model.
 SELECT
-    -- Shipment identifiers and descriptive attributes.
+    -- Shipment identifiers and source attributes
     shipment_id,
     order_id,
     shipping_method,
@@ -157,22 +170,22 @@ SELECT
     delivery_city,
     delivery_state,
 
-    -- Derived delivery duration and delivery indicator.
+    -- Derived delivery duration and delivery indicator
     delivery_days,
     is_delivered,
 
-    -- Standardized status and delivery performance categories.
+    -- Standardized status and delivery performance categories
     shipment_status_group,
     delivery_speed,
     is_delivery_delayed,
 
-    -- Source and ingestion audit timestamps.
+    -- Source lineage
     updated_at,
     ingested_at,
     loaded_at,
 
-    -- Record when the transformation query executes.
-    -- In a view, this value may change whenever the view is queried.
+    -- Transformation execution timestamp.
+    -- For a view, this value may change whenever the view is queried.
     {{ transformed_timestamp() }} AS transformed_at
 
 FROM shipments_enriched

@@ -2,30 +2,39 @@
 -- ============================================================
 -- Model: dim_customers
 -- Layer: Gold
+-- Grain: One row per customer (customer_id)
+--
 -- Purpose:
 --   Create a business-friendly customer dimension for analytics.
 --   Provide customer profile attributes, lifecycle classification,
---   and customer activity indicators for dashboard filtering.
---
--- Grain:
---   One row per customer (customer_id).
+--   and activity indicators for dashboard filtering and analysis.
 --
 -- Source:
 --   silver_customers
 --
--- Important assumptions:
---   1. Customer lifecycle is based on customer tenure in days.
---   2. New Customer: tenure under 90 days.
---   3. Established Customer: tenure from 90 to 364 days.
---   4. Long-Term Customer: tenure of 365 days or more.
---   5. Lifecycle classification depends on customer_tenure_days
---      calculated by the Silver model.
+-- Transformations:
+--   1. Select standardized customer attributes from Silver.
+--   2. Preserve customer age, age group, and tenure.
+--   3. Classify customers by lifecycle stage.
+--   4. Preserve source and transformation lineage timestamps.
+--   5. Add a Gold modeling timestamp.
+--
+-- Lifecycle assumptions:
+--   - New Customer: tenure under 90 days.
+--   - Established Customer: tenure from 90 through 364 days.
+--   - Long-Term Customer: tenure of 365 days or more.
+--   - Missing tenure is classified as Unknown.
+--   - Negative tenure is classified as Invalid Tenure.
+--   - Tenure is inherited from silver_customers and is
+--     calculated relative to the current date.
 -- ============================================================
 
 WITH customer_dimension AS (
 
-    -- Step 1: Select customer attributes from the Silver layer.
+    -- Step 1: Select standardized customer attributes from Silver.
+    -- Preserve the customer-level grain; do not join or aggregate.
     SELECT
+        -- Customer identifiers and profile attributes
         customer_id,
         customer_name,
         email,
@@ -35,16 +44,19 @@ WITH customer_dimension AS (
         state,
         country,
         postal_code,
+
+        -- Customer segmentation and status
         customer_segment,
         customer_status_group,
+        is_active_customer,
+
+        -- Customer lifecycle attributes
         signup_date,
         customer_age,
         customer_tenure_days,
-        is_active_customer,
 
-        -- Classify customers by how long they have been registered.
-        -- Missing tenure remains Unknown instead of being
-        -- incorrectly assigned to a lifecycle stage.
+        -- Classify customers by registration tenure.
+        -- Missing and negative tenure values remain distinguishable.
         CASE
             WHEN customer_tenure_days IS NULL
                 THEN 'Unknown'
@@ -61,8 +73,7 @@ WITH customer_dimension AS (
             ELSE 'Long-Term Customer'
         END AS customer_lifecycle_stage,
 
-        -- Carry source and transformation timestamps forward
-        -- for lineage and data auditing.
+        -- Source and upstream transformation lineage
         ingested_at,
         loaded_at,
         transformed_at
@@ -71,8 +82,9 @@ WITH customer_dimension AS (
 
 )
 
--- Step 2: Return the final customer dimension.
+-- Step 2: Return the final Gold customer dimension.
 SELECT
+    -- Customer key and profile attributes
     customer_id,
     customer_name,
     email,
@@ -82,22 +94,25 @@ SELECT
     state,
     country,
     postal_code,
+
+    -- Customer segmentation and status
     customer_segment,
     customer_status_group,
+    is_active_customer,
+
+    -- Customer lifecycle attributes
     signup_date,
     customer_age,
     customer_tenure_days,
-    is_active_customer,
     customer_lifecycle_stage,
 
-    -- Technical lineage timestamps.
+    -- Technical lineage timestamps
     ingested_at,
     loaded_at,
     transformed_at,
 
-    -- Record when this Gold model's transformation executes.
-    -- Actual behavior depends on the modeled_timestamp() macro
-    -- and the model's materialization.
+    -- Gold modeling timestamp.
+    -- Its persistence depends on the macro and materialization.
     {{ modeled_timestamp() }} AS modeled_at
 
 FROM customer_dimension
