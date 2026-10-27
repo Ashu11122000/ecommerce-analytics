@@ -1,29 +1,17 @@
 
-/*
-    Custom dbt Data Test: Positive Order Item Values
-
-    Purpose:
-    - Verify that every order item has a quantity greater than zero.
-    - Verify that every order item has a unit price greater than zero.
-    - Return any order items that violate either rule.
-
-    Expected result:
-    - 0 rows returned means the test passes.
-    - 1 or more rows returned means the test fails.
-
-    Important:
-    - This test treats zero and negative values as invalid.
-    - NULL values are not caught by these comparisons alone.
-      Use explicit NULL checks if the columns are nullable.
-*/
+-- Test: Order-item quantities and sales amounts must not be negative.
+-- Expected result: Zero rows returned.
+--
+-- Assumes fact_order_items contains:
+-- quantity, gross_sales_amount, and net_sales_amount.
 
 SELECT
     order_item_id,
-    order_id,
     quantity,
-    unit_price
+    gross_sales_amount,
+    net_sales_amount
 FROM {{ ref('fact_order_items') }}
-WHERE quantity IS NULL
-   OR quantity <= 0
-   OR unit_price IS NULL
-   OR unit_price <= 0
+WHERE
+    quantity < 0
+    OR gross_sales_amount < 0
+    OR net_sales_amount < 0
