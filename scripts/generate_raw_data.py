@@ -23,7 +23,7 @@ Target record counts:
     - returns     = 30
 
 The data includes:
-    - different business dates
+    - multi-year business dates for YoY and other time comparisons
     - different ingestion batches
     - realistic relationships
     - historical product prices
@@ -42,7 +42,9 @@ Timestamp strategy:
     - ingested_at = when the record arrived in the RAW layer
 
 All normal generated timestamps are constrained to the
-DATA_AS_OF date.
+DATA_AS_OF date. Orders span multiple years to support historical
+trend analysis. One explicitly controlled late-arriving order and
+intentional data-quality records are included for testing.
 
 This script uses only Python standard-library modules.
 """
@@ -748,7 +750,7 @@ def generate_orders():
     orders = []
 
     order_start_date = date(
-        2026,
+        2022,
         1,
         1,
     )
@@ -1176,7 +1178,11 @@ def generate_order_items(
     #
     # This is intentionally inserted into RAW so that the
     # Silver layer can demonstrate data-quality handling.
+    # It is not intended to be used as a valid business metric.
     # --------------------------------------------------------
+    if len(order_items) > 10:
+        order_items[10]["quantity"] = -1
+
     # --------------------------------------------------------
     # Controlled data-quality issue #2
     # --------------------------------------------------------
@@ -1844,6 +1850,9 @@ def print_data_quality_summary(
         f"Negative quantities        : "
         f"{negative_quantity_count}"
     )
+
+    if negative_quantity_count == 0:
+        print("WARNING: expected negative-quantity test record was not generated.")
 
     print(
         f"Late-arriving order        : "
