@@ -8,8 +8,9 @@ models:
   # ============================================================
   - name: dim_customers
     description: >
-      Gold customer dimension containing one row per customer and
-      analytics-ready customer attributes.
+      Gold customer dimension containing one row per customer,
+      with customer attributes, lifecycle classifications,
+      and customer segmentation fields.
 
     columns:
       - name: customer_id
@@ -19,12 +20,12 @@ models:
           - unique
 
       - name: customer_name
-        description: "Customer's standardized full name."
+        description: "Standardized customer name."
         data_tests:
           - not_null
 
       - name: email
-        description: "Customer's standardized email address."
+        description: "Standardized customer email address."
         data_tests:
           - not_null
 
@@ -35,22 +36,22 @@ models:
         description: "Business-friendly classification of customer age."
 
       - name: city
-        description: "Customer's city."
+        description: "Customer city."
 
       - name: state
-        description: "Customer's state."
+        description: "Customer state."
 
       - name: country
-        description: "Customer's country."
+        description: "Customer country."
 
       - name: postal_code
-        description: "Customer's postal code."
+        description: "Customer postal code."
 
       - name: customer_segment
-        description: "Customer segment."
+        description: "Customer segment used for segmentation analysis."
 
       - name: customer_status_group
-        description: "Business-friendly grouping of customer status."
+        description: "Standardized business grouping of customer status."
 
       - name: signup_date
         description: "Date when the customer signed up."
@@ -61,13 +62,16 @@ models:
         description: "Customer age calculated from date of birth."
 
       - name: customer_tenure_days
-        description: "Number of days since customer signup."
+        description: "Number of calendar days since customer signup."
 
       - name: is_active_customer
-        description: "Flag indicating whether the customer is currently active."
+        description: "Boolean indicator of whether the customer is active."
 
       - name: customer_lifecycle_stage
-        description: "Customer lifecycle classification based on tenure."
+        description: >
+          Lifecycle classification based on customer tenure,
+          including New Customer, Established Customer,
+          Long-Term Customer, Unknown, and Invalid Tenure.
 
       - name: ingested_at
         description: "Timestamp when the record entered the raw data layer."
@@ -85,19 +89,20 @@ models:
           - not_null
 
       - name: modeled_at
-        description: "Timestamp associated with building the Gold dimension."
+        description: "Timestamp associated with Gold model execution."
         data_tests:
           - not_null
 
   # ============================================================
   # DIMENSION: PRODUCTS
   # Grain: One row per product_id.
-  # Purpose: Product attributes, pricing, margins, and inventory.
+  # Purpose: Product, pricing, profitability, and inventory analysis.
   # ============================================================
   - name: dim_products
     description: >
-      Gold product dimension containing one row per product and
-      analytics-ready product, pricing, margin, and inventory attributes.
+      Gold product dimension containing product attributes,
+      current pricing, expected unit profitability, price bands,
+      and inventory classifications.
 
     columns:
       - name: product_id
@@ -133,25 +138,28 @@ models:
 
       - name: profit_amount
         description: >
-          Expected unit profit calculated as selling price minus cost price.
-          This is not realized sales profit.
+          Expected unit profit calculated as selling price minus
+          cost price. This is not realized profit from sales.
 
       - name: profit_margin_pct
         description: >
-          Expected unit margin percentage based on selling price and cost price.
+          Expected unit profit margin as a percentage of selling price.
           This is not a margin calculated from completed transactions.
 
       - name: profit_margin_band
-        description: "Business classification of the expected unit margin."
+        description: >
+          Business classification of expected unit profit margin:
+          Low Margin, Medium Margin, High Margin, Very High Margin,
+          or Unknown.
 
       - name: stock_quantity
-        description: "Current recorded available stock quantity."
+        description: "Currently recorded stock quantity."
 
       - name: reorder_level
-        description: "Stock threshold at which replenishment should be considered."
+        description: "Stock threshold used to identify replenishment needs."
 
       - name: stock_status
-        description: "Business classification of current product stock."
+        description: "Business classification of current inventory status."
 
       - name: price_band
         description: "Business classification based on selling price."
@@ -160,7 +168,7 @@ models:
         description: "Current recorded product status."
 
       - name: is_active_product
-        description: "Flag indicating whether the product is currently active."
+        description: "Boolean indicator of whether the product is active."
 
       - name: launch_date
         description: "Date when the product was launched."
@@ -181,7 +189,7 @@ models:
           - not_null
 
       - name: modeled_at
-        description: "Timestamp associated with building the Gold dimension."
+        description: "Timestamp associated with Gold model execution."
         data_tests:
           - not_null
 
@@ -192,8 +200,9 @@ models:
   # ============================================================
   - name: dim_date
     description: >
-      Gold date dimension containing one row per calendar date in the
-      date range generated from available order dates.
+      Gold date dimension containing one row per calendar date
+      between the minimum and maximum order dates in Silver.
+      Dates outside that range are not currently generated.
 
     columns:
       - name: date_key
@@ -203,7 +212,7 @@ models:
           - unique
 
       - name: full_date
-        description: "Calendar date."
+        description: "Calendar date used for date-based joins and reporting."
         data_tests:
           - not_null
           - unique
@@ -212,40 +221,43 @@ models:
         description: "Calendar year."
 
       - name: quarter
-        description: "Calendar quarter number."
+        description: "Calendar quarter number from 1 through 4."
 
       - name: month
-        description: "Calendar month number."
+        description: "Calendar month number from 1 through 12."
 
       - name: month_name
         description: "Calendar month name."
 
       - name: week_of_year
-        description: "Calendar week number."
+        description: >
+          ISO week number. The ISO week-year may differ from the
+          calendar year around New Year's Day.
 
       - name: day_of_month
         description: "Day number within the month."
 
       - name: day_of_week
-        description: "Day number within the week; verify the model's numbering convention."
+        description: >
+          PostgreSQL day-of-week number: Sunday = 0 through Saturday = 6.
 
       - name: day_name
         description: "Calendar day name."
 
       - name: is_weekend
-        description: "Flag indicating whether the date falls on a weekend."
+        description: "Boolean indicator for Saturday or Sunday."
 
       - name: is_month_end
-        description: "Flag indicating whether the date is the final day of its month."
+        description: "Boolean indicator for the final calendar day of a month."
 
       - name: quarter_label
-        description: "Quarter label, for example Q1-2026."
+        description: "Readable quarter label, such as Q1-2026."
 
       - name: month_label
-        description: "Month label in YYYY-MM format."
+        description: "Sortable month label in YYYY-MM format."
 
       - name: modeled_at
-        description: "Timestamp associated with building the Gold date dimension."
+        description: "Timestamp associated with Gold model execution."
         data_tests:
           - not_null
 
@@ -257,8 +269,8 @@ models:
   - name: fact_order_items
     description: >
       Gold order-item fact table with one row representing one product
-      line item within one order. Monetary measures must be interpreted
-      using the associated currency.
+      line item within an order. Monetary measures must be interpreted
+      using the associated order currency.
 
     columns:
       - name: order_item_id
@@ -273,9 +285,10 @@ models:
           - not_null
 
       - name: customer_id
-        description: "Identifier of the customer who placed the order."
+        description: >
+          Identifier of the customer who placed the order.
+          May be NULL if the parent order could not be matched.
         data_tests:
-          - not_null
           - relationships:
               arguments:
                 to: ref('dim_customers')
@@ -291,9 +304,10 @@ models:
                 field: product_id
 
       - name: order_date_key
-        description: "Foreign key to dim_date using YYYYMMDD format."
+        description: >
+          Date dimension key in YYYYMMDD format. May be NULL
+          if the order date is unavailable.
         data_tests:
-          - not_null
           - relationships:
               arguments:
                 to: ref('dim_date')
@@ -301,66 +315,77 @@ models:
 
       - name: order_date
         description: "Timestamp when the order was placed."
-        data_tests:
-          - not_null
 
       - name: order_status
-        description: "Order status associated with the order."
+        description: "Standardized status of the associated order."
 
       - name: sales_channel
         description: "Channel through which the order was placed."
 
       - name: currency
-        description: "Currency used for the order; avoid summing different currencies together."
+        description: >
+          Currency associated with the order. Do not sum monetary
+          measures across currencies without conversion.
 
       - name: quantity
-        description: "Number of units purchased."
+        description: "Number of units recorded for the order item."
         data_tests:
           - not_null
 
       - name: unit_price
-        description: "Historical price per unit at the time of purchase."
+        description: "Unit price recorded for the order item."
         data_tests:
           - not_null
 
       - name: discount_amount
-        description: "Discount applied to the order item."
+        description: "Discount amount applied to the order item."
 
       - name: tax_amount
-        description: "Tax applied to the order item."
+        description: "Tax amount applied to the order item."
 
       - name: line_total
         description: "Line-item total supplied by the source system."
 
       - name: calculated_line_total
-        description: "Calculated line total based on quantity, price, discount, and tax."
+        description: >
+          Independently calculated line total from quantity,
+          unit price, discount, and tax.
 
       - name: line_total_variance
-        description: "Difference between source and calculated line totals."
+        description: "Difference between the source and calculated line totals."
 
       - name: is_line_total_mismatch
-        description: "Flag indicating whether source and calculated line totals differ beyond the configured tolerance."
+        description: >
+          Boolean indicator that the source and calculated line totals
+          differ beyond the Silver model's configured tolerance.
 
       - name: has_negative_quantity
-        description: "Flag identifying line items with a negative quantity."
+        description: "Boolean indicator of a negative item quantity."
 
       - name: returned_quantity
-        description: "Number of units returned for the line item."
+        description: "Number of returned units recorded for this item."
 
       - name: has_return
-        description: "Flag indicating whether the line item has returned units."
+        description: "Boolean indicator of returned units."
 
       - name: has_excess_returned_quantity
-        description: "Flag identifying returned quantity greater than ordered quantity."
+        description: >
+          Boolean indicator that returned quantity exceeds ordered quantity.
 
       - name: return_rate
-        description: "Returned quantity divided by ordered quantity, according to the Silver model's definition."
+        description: >
+          Returned quantity divided by ordered quantity, according
+          to the Silver model's definition.
 
       - name: gross_sales_amount
-        description: "Quantity multiplied by unit price, before item discounts and taxes."
+        description: >
+          Quantity multiplied by unit price before discounts and tax.
+          Negative quantities are preserved when present in the source.
 
       - name: net_sales_amount
-        description: "Calculated amount after discount and including tax; confirm this definition before reporting revenue."
+        description: >
+          Calculated transaction amount after discount and including tax.
+          This is not necessarily tax-exclusive accounting revenue.
 
       - name: updated_at
         description: "Timestamp when the source order-item record was last updated."
@@ -381,19 +406,20 @@ models:
           - not_null
 
       - name: modeled_at
-        description: "Timestamp associated with building the Gold fact table."
+        description: "Timestamp associated with Gold model execution."
         data_tests:
           - not_null
 
   # ============================================================
   # FACT: PAYMENTS
   # Grain: One row per payment_id.
-  # Purpose: Payment transaction and payment-status analysis.
+  # Purpose: Payment amounts, status, methods, and operational monitoring.
   # ============================================================
   - name: fact_payments
     description: >
-      Gold payment fact table with one row representing one payment transaction.
-      An order may have multiple payment transactions.
+      Gold payment fact table with one row per payment transaction.
+      An order may have multiple payment records. Amounts must be
+      interpreted in their relevant currency and payment status.
 
     columns:
       - name: payment_id
@@ -408,9 +434,10 @@ models:
           - not_null
 
       - name: payment_date_key
-        description: "Foreign key to dim_date using YYYYMMDD format."
+        description: >
+          Date dimension key in YYYYMMDD format. May be NULL
+          if the payment date is unavailable.
         data_tests:
-          - not_null
           - relationships:
               arguments:
                 to: ref('dim_date')
@@ -420,27 +447,33 @@ models:
         description: "Payment method used for the transaction."
 
       - name: payment_status
-        description: "Original payment status."
+        description: "Standardized payment status."
 
       - name: payment_status_group
         description: "Business-friendly grouping of payment statuses."
 
       - name: amount
-        description: "Payment transaction amount; check payment status before interpreting it as collected revenue."
+        description: >
+          Recorded payment transaction amount. Check payment status
+          and currency before interpreting it as collected revenue.
         data_tests:
           - not_null
 
       - name: is_successful_payment
-        description: "Flag indicating whether the payment status represents a successful payment."
+        description: >
+          Boolean indicator derived from Silver payment-status rules.
+          May be NULL when payment status is unknown.
 
       - name: has_transaction_reference
-        description: "Flag indicating whether a transaction reference is available."
+        description: "Boolean indicator of whether a transaction reference is available."
 
       - name: payment_amount_band
         description: "Business classification of the payment amount."
 
       - name: payment_update_delay_days
-        description: "Calendar-day difference between payment date and source record update."
+        description: >
+          Calendar-day difference between payment date and source
+          record update, as calculated in Silver.
 
       - name: updated_at
         description: "Timestamp when the source payment record was last updated."
@@ -461,6 +494,207 @@ models:
           - not_null
 
       - name: modeled_at
-        description: "Timestamp associated with building the Gold fact table."
+        description: "Timestamp associated with Gold model execution."
+        data_tests:
+          - not_null
+
+  # ============================================================
+  # FACT: RETURNS
+  # Grain: One row per return_id.
+  # Purpose: Return quantities, refund analysis, and return quality.
+  # ============================================================
+  - name: fact_returns
+    description: >
+      Gold return fact table with one row per return record.
+      Multiple returns may refer to the same order item.
+      Refund amounts must be interpreted in the relevant currency.
+
+    columns:
+      - name: return_id
+        description: "Unique identifier for each return record."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_item_id
+        description: "Identifier of the order item associated with the return."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fact_order_items')
+                field: order_item_id
+
+      - name: return_date_key
+        description: >
+          Date dimension key in YYYYMMDD format. May be NULL
+          if the return date is unavailable.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: return_date
+        description: "Date on which the return was recorded."
+
+      - name: return_reason
+        description: "Recorded reason for the return."
+
+      - name: return_status
+        description: "Standardized return status."
+
+      - name: return_status_group
+        description: "Business-friendly grouping of return statuses."
+
+      - name: return_quantity
+        description: "Quantity recorded in the return record."
+
+      - name: refund_amount
+        description: >
+          Refund amount recorded for the return. Confirm status
+          and currency before interpreting it as a completed refund.
+
+      - name: refund_per_unit
+        description: >
+          Refund amount divided by return quantity, as calculated
+          in the Silver model when valid.
+
+      - name: is_return_approved
+        description: >
+          Boolean indicator derived from Silver return-status rules.
+          May be NULL when return status is unknown.
+
+      - name: has_refund
+        description: >
+          Indicator of whether a positive refund amount is recorded.
+          May be NULL when the refund amount is unknown.
+
+      - name: has_invalid_return_quantity
+        description: >
+          Indicator of a non-positive return quantity. May be NULL
+          when the return quantity is unknown.
+
+      - name: return_update_delay_days
+        description: >
+          Calendar-day difference between return date and source
+          record update, as calculated in Silver.
+
+      - name: updated_at
+        description: "Timestamp when the source return record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the record entered the raw data layer."
+        data_tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp associated with Bronze-layer processing."
+        data_tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp associated with Silver-layer transformation."
+        data_tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp associated with Gold model execution."
+        data_tests:
+          - not_null
+
+  # ============================================================
+  # FACT: SHIPMENTS
+  # Grain: One row per shipment_id.
+  # Purpose: Shipment status, delivery time, and delivery performance.
+  # ============================================================
+  - name: fact_shipments
+    description: >
+      Gold shipment fact table with one row per shipment record.
+      Multiple shipments may belong to the same order.
+      Delivery duration and delay indicators follow Silver definitions.
+
+    columns:
+      - name: shipment_id
+        description: "Unique identifier for each shipment."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        description: "Identifier of the order associated with the shipment."
+        data_tests:
+          - not_null
+
+      - name: shipped_date_key
+        description: >
+          Date dimension key based on shipped_at in YYYYMMDD format.
+          May be NULL if the shipment timestamp is unavailable.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: shipping_method
+        description: "Recorded shipping method."
+
+      - name: shipment_status
+        description: "Standardized shipment status."
+
+      - name: shipment_status_group
+        description: "Business-friendly grouping of shipment statuses."
+
+      - name: delivery_city
+        description: "Recorded delivery city."
+
+      - name: delivery_state
+        description: "Recorded delivery state."
+
+      - name: shipped_at
+        description: "Timestamp when the shipment was dispatched."
+
+      - name: delivered_at
+        description: "Timestamp when the shipment was delivered, when available."
+
+      - name: delivery_days
+        description: >
+          Delivery duration in days, calculated in Silver from
+          shipped_at and delivered_at when valid.
+
+      - name: is_delivered
+        description: "Boolean indicator of whether a delivery timestamp is present."
+
+      - name: delivery_speed
+        description: >
+          Delivery-speed classification inherited from Silver,
+          including Fast, Standard, Slow, Unknown, or Invalid.
+
+      - name: is_delivery_delayed
+        description: >
+          Boolean indicator of delivery delay according to the
+          Silver model's threshold and timestamp-validity rules.
+          May be NULL when duration cannot be evaluated.
+
+      - name: updated_at
+        description: "Timestamp when the source shipment record was last updated."
+
+      - name: ingested_at
+        description: "Timestamp when the record entered the raw data layer."
+        data_tests:
+          - not_null
+
+      - name: loaded_at
+        description: "Timestamp associated with Bronze-layer processing."
+        data_tests:
+          - not_null
+
+      - name: transformed_at
+        description: "Timestamp associated with Silver-layer transformation."
+        data_tests:
+          - not_null
+
+      - name: modeled_at
+        description: "Timestamp associated with Gold model execution."
         data_tests:
           - not_null

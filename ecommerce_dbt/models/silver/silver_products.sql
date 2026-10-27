@@ -2,38 +2,56 @@
 -- ============================================================
 -- Model: silver_products
 -- Layer: Silver
+-- Grain: One row per product (product_id)
+--
 -- Purpose:
 --   Enrich product data from the Bronze layer with profitability
 --   metrics, stock classifications, pricing bands, and product
 --   activity indicators.
 --
--- Grain:
---   One row per product (product_id).
+-- Transformations:
+--   1. Calculate expected profit per unit.
+--   2. Calculate profit margin as a percentage of selling price.
+--   3. Classify inventory levels using the reorder threshold.
+--   4. Assign products to fixed selling-price bands.
+--   5. Identify products with recognized active statuses.
+--   6. Preserve source lineage and add a transformation timestamp.
 --
 -- Important assumptions:
---   1. Selling price and cost price use the same currency and unit.
---   2. Profit amount is selling price minus cost price per unit.
---   3. Profit margin is calculated as a percentage of selling price.
---   4. Stock status is determined using stock_quantity and reorder_level.
---   5. Price bands use fixed thresholds for reporting purposes.
+--   - Selling price and cost price use the same currency and unit.
+--   - Profit amount = selling price - cost price per unit.
+--   - Profit margin = profit amount / selling price * 100.
+--   - Stock status uses stock_quantity and reorder_level.
+--   - Stock equal to the reorder level is classified as Low Stock.
+--   - Price bands are reporting conventions, not universal
+--     definitions of product value.
+--   - Source anomalies are flagged, not silently corrected.
 -- ============================================================
 
 WITH products_base AS (
 
     -- Step 1: Select product attributes from the Bronze model.
+    -- Preserve the product-level grain; do not join or aggregate.
     SELECT
+        -- Product identifiers and descriptive attributes
         product_id,
         product_name,
         category,
         subcategory,
         brand,
         supplier_id,
+
+        -- Source pricing and inventory attributes
         cost_price,
         selling_price,
         stock_quantity,
         reorder_level,
+
+        -- Product lifecycle attributes
         product_status,
         launch_date,
+
+        -- Source lineage
         updated_at,
         ingested_at,
         loaded_at
@@ -48,25 +66,28 @@ products_enriched AS (
     SELECT
         *,
 
-        -- Calculate expected profit per unit.
-        -- This is a theoretical amount before other business costs.
+        -- Expected profit per unit before other business costs.
         CASE
             WHEN selling_price IS NOT NULL
-                AND cost_price IS NOT NULL
-            THEN ROUND((selling_price - cost_price)::NUMERIC, 2)
+                 AND cost_price IS NOT NULL
+            THEN ROUND(
+                (selling_price - cost_price)::NUMERIC,
+                2
+            )
             ELSE NULL
         END AS profit_amount,
 
-        -- Calculate profit margin as a percentage of selling price.
-        -- Return NULL when selling price is missing or zero/negative.
+        -- Profit margin as a percentage of selling price.
+        -- Explicit NUMERIC casting avoids integer division.
+        -- NULL is returned for missing, zero, or negative prices.
         CASE
             WHEN selling_price > 0
-                AND cost_price IS NOT NULL
+                 AND cost_price IS NOT NULL
             THEN ROUND(
                 (
-                    (selling_price - cost_price)
-                    / selling_price
-                )::NUMERIC * 100,
+                    (selling_price::NUMERIC - cost_price::NUMERIC)
+                    / selling_price::NUMERIC
+                ) * 100,
                 2
             )
             ELSE NULL
@@ -84,8 +105,7 @@ products_enriched AS (
         END AS stock_status,
 
         -- Group products into fixed selling-price bands.
-        -- These thresholds are reporting conventions, not universal
-        -- definitions of budget, premium, or luxury products.
+        -- These thresholds are reporting conventions.
         CASE
             WHEN selling_price IS NULL THEN 'Unknown'
             WHEN selling_price < 0 THEN 'Invalid Price'
@@ -96,7 +116,7 @@ products_enriched AS (
         END AS price_band,
 
         -- Identify products whose source status indicates availability.
-        -- This does not guarantee that the product is currently in stock.
+        -- Active status does not guarantee available inventory.
         CASE
             WHEN LOWER(TRIM(product_status)) IN (
                 'active',
@@ -105,7 +125,7 @@ products_enriched AS (
                 THEN TRUE
 
             WHEN product_status IS NULL
-                OR TRIM(product_status) = ''
+                 OR TRIM(product_status) = ''
                 THEN NULL
 
             ELSE FALSE
@@ -117,7 +137,7 @@ products_enriched AS (
 
 -- Step 3: Return the final enriched Silver product model.
 SELECT
-    -- Product identifiers and descriptive attributes.
+    -- Product identifiers and descriptive attributes
     product_id,
     product_name,
     category,
@@ -125,7 +145,7 @@ SELECT
     brand,
     supplier_id,
 
-    -- Source pricing and inventory attributes.
+    -- Source pricing and inventory attributes
     cost_price,
     selling_price,
     stock_quantity,
@@ -133,21 +153,21 @@ SELECT
     product_status,
     launch_date,
 
-    -- Derived profitability metrics.
+    -- Derived profitability metrics
     profit_amount,
     profit_margin_pct,
 
-    -- Derived stock, price, and activity classifications.
+    -- Derived stock, price, and activity classifications
     stock_status,
     price_band,
     is_active_product,
 
-    -- Source and ingestion audit timestamps.
+    -- Source lineage
     updated_at,
     ingested_at,
     loaded_at,
 
-    -- Record when the transformation query executes.
+    -- Transformation execution timestamp.
     -- In a view, this value may change whenever the view is queried.
     {{ transformed_timestamp() }} AS transformed_at
 

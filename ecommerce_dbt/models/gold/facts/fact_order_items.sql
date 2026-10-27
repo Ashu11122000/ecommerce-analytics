@@ -2,25 +2,26 @@
 -- ============================================================
 -- Model: fact_order_items
 -- Layer: Gold
--- Purpose:
---   Build an analytics-ready order-item fact table containing
---   sales measures, product and customer dimension keys,
---   return indicators, and data-quality information.
+-- Grain: One row per order item (order_item_id)
 --
--- Grain:
---   One row per order item (order_item_id).
+-- Purpose:
+--   Provide an analytics-ready fact table for sales, product,
+--   customer, returns, and order-item data-quality analysis.
 --
 -- Materialization:
---   Incremental table using order_item_id as the unique key.
+--   Incremental table, using order_item_id as the unique key.
+--
+-- Financial definitions:
+--   gross_sales_amount = quantity * unit_price
+--   net_sales_amount   = gross sales - discount + tax
 --
 -- Important assumptions:
---   1. Each order item belongs to one order and one product.
---   2. Sales amounts are expressed in the order's currency.
---   3. Gross sales = quantity * unit_price.
---   4. Net sales = gross sales - discount + tax.
---   5. The incremental filter uses a lookback window to detect
---      changes to existing rows. The timestamp watermark logic
---      must be validated against the actual update patterns.
+--   - Each order item belongs to one order and one product.
+--   - Amounts are expressed in the order's currency.
+--   - Net sales includes tax and is not tax-exclusive revenue.
+--   - Return quantities and rates are inherited from Silver.
+--   - Incremental processing uses a seven-day timestamp lookback.
+--   - The LEFT JOIN preserves items if the parent order is missing.
 -- ============================================================
 
 {{
@@ -32,7 +33,7 @@
 
 WITH order_items AS (
 
-    -- Step 1: Read enriched order-item data from the Silver layer.
+    -- Step 1: Read enriched order-item records from Silver.
     SELECT
         oi.order_item_id,
         oi.order_id,
@@ -76,37 +77,39 @@ orders AS (
 
 fact_base AS (
 
-    -- Step 3: Join each order item to its parent order.
-    -- The intended grain remains one row per order_item_id.
+    -- Step 3: Enrich each item with its parent order.
+    -- LEFT JOIN preserves the item if its order is missing.
     SELECT
         oi.order_item_id,
 
-        -- Dimension and transaction identifiers.
+        -- Transaction identifiers and dimension keys.
         oi.order_id,
         o.customer_id,
         oi.product_id,
 
-        -- Date dimension key in YYYYMMDD format.
-        -- NULL is preserved when the order date is missing.
+        -- Date key compatible with dim_date.date_key.
         CASE
             WHEN o.order_date IS NOT NULL
-            THEN TO_CHAR(o.order_date::DATE, 'YYYYMMDD')::INTEGER
+                THEN TO_CHAR(
+                    o.order_date::DATE,
+                    'YYYYMMDD'
+                )::INTEGER
             ELSE NULL
         END AS order_date_key,
 
-        -- Order attributes useful for filtering and grouping.
+        -- Order-level descriptive attributes.
         o.order_date,
         o.order_status,
         o.sales_channel,
         o.currency,
 
-        -- Transaction quantity and pricing components.
+        -- Quantity and pricing components.
         oi.quantity,
         oi.unit_price,
         oi.discount_amount,
         oi.tax_amount,
 
-        -- Source and independently calculated line totals.
+        -- Source and calculated line totals.
         oi.line_total,
         oi.calculated_line_total,
 
@@ -115,44 +118,45 @@ fact_base AS (
         oi.is_line_total_mismatch,
         oi.has_negative_quantity,
 
-        -- Return information inherited from Silver.
+        -- Return attributes inherited from Silver.
         oi.returned_quantity,
         oi.has_return,
         oi.has_excess_returned_quantity,
         oi.return_rate,
 
         -- Gross sales before discounts and tax.
-        -- Assumes unit_price is the historical price per unit.
         CASE
             WHEN oi.quantity IS NOT NULL
-                AND oi.unit_price IS NOT NULL
+             AND oi.unit_price IS NOT NULL
             THEN ROUND(
-                (oi.quantity * oi.unit_price)::NUMERIC,
+                (
+                    oi.quantity::NUMERIC
+                    * oi.unit_price::NUMERIC
+                ),
                 2
             )
             ELSE NULL
         END AS gross_sales_amount,
 
-        -- Net sales including tax, after line-item discount.
-        -- This is a transaction amount, not a tax-exclusive
-        -- accounting revenue measure.
+        -- Net transaction amount after discount and including tax.
         CASE
             WHEN oi.quantity IS NOT NULL
-                AND oi.unit_price IS NOT NULL
-                AND oi.discount_amount IS NOT NULL
-                AND oi.tax_amount IS NOT NULL
+             AND oi.unit_price IS NOT NULL
+             AND oi.discount_amount IS NOT NULL
+             AND oi.tax_amount IS NOT NULL
             THEN ROUND(
                 (
-                    oi.quantity * oi.unit_price
-                    - oi.discount_amount
-                    + oi.tax_amount
-                )::NUMERIC,
+                    oi.quantity::NUMERIC
+                    * oi.unit_price::NUMERIC
+                    - oi.discount_amount::NUMERIC
+                    + oi.tax_amount::NUMERIC
+                ),
                 2
             )
             ELSE NULL
         END AS net_sales_amount,
 
-        -- Source and ingestion lineage timestamps.
+        -- Source and transformation lineage.
         oi.updated_at,
         oi.ingested_at,
         oi.loaded_at,
@@ -160,12 +164,12 @@ fact_base AS (
 
     FROM order_items AS oi
 
-    INNER JOIN orders AS o
+    LEFT JOIN orders AS o
         ON oi.order_id = o.order_id
 
 )
 
--- Step 4: Return the final Gold fact table.
+-- Step 4: Return the final Gold order-item fact.
 SELECT
     order_item_id,
     order_id,
@@ -203,31 +207,31 @@ SELECT
     loaded_at,
     transformed_at,
 
-    -- Timestamp generated by the modeled_timestamp macro.
-    -- Actual behavior depends on the macro implementation.
     {{ modeled_timestamp() }} AS modeled_at
 
 FROM fact_base
 
 {% if is_incremental() %}
 
--- Step 5: Process recently ingested or updated source records.
--- The lookback window helps detect late-arriving changes.
--- Existing records are updated using the configured unique key.
+-- Step 5: Reprocess recently ingested or updated records.
+-- The lookback allows recent source changes to be picked up.
+-- dbt merges matching rows using order_item_id as unique_key.
 WHERE
     ingested_at >= (
-        SELECT COALESCE(
-            MAX(ingested_at),
-            '1900-01-01'::TIMESTAMP
-        ) - INTERVAL '7 days'
+        SELECT
+            COALESCE(
+                MAX(ingested_at),
+                '1900-01-01'::TIMESTAMP
+            ) - INTERVAL '7 days'
         FROM {{ this }}
     )
 
     OR updated_at >= (
-        SELECT COALESCE(
-            MAX(updated_at),
-            '1900-01-01'::TIMESTAMP
-        ) - INTERVAL '7 days'
+        SELECT
+            COALESCE(
+                MAX(updated_at),
+                '1900-01-01'::TIMESTAMP
+            ) - INTERVAL '7 days'
         FROM {{ this }}
     )
 

@@ -2,34 +2,51 @@
 -- ============================================================
 -- Model: silver_payments
 -- Layer: Silver
+-- Grain: One row per payment (payment_id)
+--
 -- Purpose:
 --   Clean and enrich payment data from the Bronze layer.
 --   Standardize payment statuses, classify payment amounts,
 --   and add transaction-reference and update-delay indicators.
 --
--- Grain:
---   One row per payment (payment_id).
+-- Transformations:
+--   1. Preserve the payment transaction grain.
+--   2. Group payment statuses into reporting categories.
+--   3. Identify recognized successful payments.
+--   4. Classify payment amounts into fixed reporting bands.
+--   5. Identify whether a transaction reference is available.
+--   6. Calculate the calendar-day delay between payment_date
+--      and updated_at.
+--   7. Preserve source lineage and add a transformation timestamp.
 --
 -- Important assumptions:
---   1. Payment amounts are expressed in the currency recorded
---      by the associated order.
---   2. Payment amount bands use fixed thresholds.
---   3. Successful payment statuses are explicitly defined below.
---   4. Payment update delay measures calendar days between
---      payment_date and updated_at.
+--   - Payment amounts use the currency associated with the order.
+--   - Amount bands use fixed thresholds and may not be comparable
+--     across currencies.
+--   - Successful payment statuses are explicitly defined below.
+--   - Payment update delay measures calendar days between
+--     payment_date and updated_at.
+--   - A successful payment is not necessarily a completed order.
+--   - Source values are preserved; anomalies are not silently fixed.
 -- ============================================================
 
 WITH payments_base AS (
 
     -- Step 1: Select payment attributes from the Bronze model.
+    -- Do not join orders or aggregate transactions at this layer.
     SELECT
+        -- Payment and order identifiers
         payment_id,
         order_id,
+
+        -- Payment details
         payment_date,
         payment_method,
         payment_status,
         amount,
         transaction_reference,
+
+        -- Source lineage
         updated_at,
         ingested_at,
         loaded_at
@@ -44,8 +61,8 @@ payments_classified AS (
     SELECT
         *,
 
-        -- Group payment statuses into standardized categories.
-        -- Trim spaces and ignore differences in letter case.
+        -- Normalize statuses into reporting categories.
+        -- Comparisons ignore surrounding spaces and letter case.
         CASE
             WHEN LOWER(TRIM(payment_status)) IN (
                 'paid', 'completed', 'success', 'successful'
@@ -69,15 +86,14 @@ payments_classified AS (
 
             -- Distinguish missing statuses from unrecognized values.
             WHEN payment_status IS NULL
-                OR TRIM(payment_status) = ''
+                 OR TRIM(payment_status) = ''
                 THEN 'Unknown'
 
             ELSE 'Other'
         END AS payment_status_group,
 
         -- Identify payments with a recognized successful status.
-        -- Missing statuses remain NULL rather than being treated
-        -- as confirmed unsuccessful payments.
+        -- Missing statuses remain NULL, not FALSE.
         CASE
             WHEN LOWER(TRIM(payment_status)) IN (
                 'paid', 'completed', 'success', 'successful'
@@ -85,14 +101,14 @@ payments_classified AS (
                 THEN TRUE
 
             WHEN payment_status IS NULL
-                OR TRIM(payment_status) = ''
+                 OR TRIM(payment_status) = ''
                 THEN NULL
 
             ELSE FALSE
         END AS is_successful_payment,
 
         -- Classify payment amounts into fixed reporting bands.
-        -- Thresholds are in the currency unit of the payment.
+        -- Thresholds use the numeric amount in its recorded currency.
         CASE
             WHEN amount IS NULL THEN 'Unknown'
             WHEN amount < 0 THEN 'Invalid'
@@ -102,20 +118,20 @@ payments_classified AS (
             ELSE 'Very Large'
         END AS payment_amount_band,
 
-        -- Flag whether a non-empty transaction reference exists.
+        -- Identify whether a non-empty transaction reference exists.
         CASE
             WHEN transaction_reference IS NULL
-                OR TRIM(transaction_reference) = ''
+                 OR TRIM(transaction_reference) = ''
                 THEN FALSE
             ELSE TRUE
         END AS has_transaction_reference,
 
-        -- Calculate the calendar-day difference between the
-        -- payment date and the source's last update timestamp.
-        -- Negative values may indicate a data-quality issue.
+        -- Calculate the calendar-day difference between the payment
+        -- date and the source's last update timestamp.
+        -- Negative values are retained for downstream investigation.
         CASE
             WHEN payment_date IS NOT NULL
-                AND updated_at IS NOT NULL
+                 AND updated_at IS NOT NULL
             THEN updated_at::DATE - payment_date::DATE
             ELSE NULL
         END AS payment_update_delay_days
@@ -126,7 +142,7 @@ payments_classified AS (
 
 -- Step 3: Return the final enriched Silver payment model.
 SELECT
-    -- Payment identifiers and descriptive attributes.
+    -- Payment identifiers and source attributes
     payment_id,
     order_id,
     payment_date,
@@ -135,22 +151,22 @@ SELECT
     amount,
     transaction_reference,
 
-    -- Standardized payment classifications and indicators.
+    -- Derived payment classifications and indicators
     payment_status_group,
     is_successful_payment,
     payment_amount_band,
     has_transaction_reference,
 
-    -- Source update monitoring.
+    -- Source update monitoring
     payment_update_delay_days,
 
-    -- Ingestion and audit timestamps.
+    -- Source lineage
     updated_at,
     ingested_at,
     loaded_at,
 
-    -- Record when the transformation query executes.
-    -- In a view, this may change each time the view is queried.
+    -- Transformation execution timestamp.
+    -- For a view, this value may change between query executions.
     {{ transformed_timestamp() }} AS transformed_at
 
 FROM payments_classified
