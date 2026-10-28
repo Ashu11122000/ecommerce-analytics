@@ -9,54 +9,78 @@
 --   Support filtering, grouping, period comparisons, and
 --   time-series reporting across business metrics.
 --
--- Source:
+-- Sources:
 --   silver_orders
+--   silver_payments
+--   silver_returns
+--   silver_shipments
 --
 -- Transformations:
---   1. Derive date boundaries from available order dates.
+--   1. Derive date boundaries from all available business events.
 --   2. Generate every calendar date between those boundaries.
 --   3. Create a YYYYMMDD integer date key.
 --   4. Add calendar, week, month, quarter, and weekend attributes.
 --   5. Add a Gold modeling timestamp.
 --
 -- Important assumptions:
---   - The date range is based on order dates currently available.
+--   - The date range covers valid dates from all four Silver models.
 --   - The calendar includes both boundary dates.
 --   - Week numbering follows PostgreSQL's EXTRACT(WEEK) convention,
 --     which uses ISO week numbering.
 --   - day_of_week follows PostgreSQL DOW:
 --     Sunday = 0, Monday = 1, ..., Saturday = 6.
 --   - is_weekend identifies Saturday and Sunday.
---   - This model does not generate dates when no valid order dates
---     are available.
+--   - Dates are not generated if all four sources contain no valid dates.
 -- ============================================================
 
 WITH date_range AS (
 
-    -- Step 1: Find the earliest and latest available order dates.
+    -- Step 1: Collect dates from all relevant business events.
     -- Casting to DATE removes the time portion of timestamps.
     SELECT
-        MIN(order_date::DATE) AS min_date,
-        MAX(order_date::DATE) AS max_date
+        MIN(event_date) AS min_date,
+        MAX(event_date) AS max_date
+    FROM (
 
-    FROM {{ ref('silver_orders') }}
+        SELECT order_date::DATE AS event_date
+        FROM {{ ref('silver_orders') }}
+        WHERE order_date IS NOT NULL
+
+        UNION ALL
+
+        SELECT payment_date::DATE AS event_date
+        FROM {{ ref('silver_payments') }}
+        WHERE payment_date IS NOT NULL
+
+        UNION ALL
+
+        SELECT return_date::DATE AS event_date
+        FROM {{ ref('silver_returns') }}
+        WHERE return_date IS NOT NULL
+
+        UNION ALL
+
+        SELECT shipped_at::DATE AS event_date
+        FROM {{ ref('silver_shipments') }}
+        WHERE shipped_at IS NOT NULL
+
+    ) AS all_event_dates
 
 ),
 
 date_series AS (
 
     -- Step 2: Generate one row per calendar day, inclusive
-    -- of the minimum and maximum order dates.
+    -- of the minimum and maximum event dates.
     SELECT
         GENERATE_SERIES(
             min_date,
             max_date,
             INTERVAL '1 day'
         )::DATE AS date_day
-
     FROM date_range
 
-    -- Guard against empty source data or missing order dates.
+    -- Guard against empty source data or missing dates.
     WHERE min_date IS NOT NULL
       AND max_date IS NOT NULL
       AND min_date <= max_date

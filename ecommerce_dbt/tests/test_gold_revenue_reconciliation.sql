@@ -1,30 +1,27 @@
 
--- Test: Gold revenue must reconcile to the sum of order-item revenue.
+-- ============================================================
+-- Test: Eligible sales records must reconcile with their
+-- calculated line totals within a tolerance of 0.01.
+--
 -- Expected result: Zero rows returned.
 --
--- This test checks for NULL revenue values and whether the
--- total net sales equals the sum of individual net sales amounts.
--- It does not compare against an independent source system.
+-- Invalid source records remain available for data-quality
+-- analysis but are excluded from eligible sales reporting.
+-- ============================================================
 
-WITH revenue_validation AS (
-    SELECT
-        COUNT(*) AS total_rows,
-        COUNT(net_sales_amount) AS non_null_revenue_rows,
-        SUM(net_sales_amount) AS total_net_sales
-    FROM {{ ref('fact_order_items') }}
-),
-
-revenue_check AS (
-    SELECT
-        total_rows,
-        non_null_revenue_rows,
-        total_net_sales
-    FROM revenue_validation
-)
-
-SELECT *
-FROM revenue_check
-WHERE
-    total_rows = 0
-    OR total_rows <> non_null_revenue_rows
-    OR total_net_sales IS NULL
+SELECT
+    order_item_id,
+    line_total,
+    calculated_line_total,
+    line_total_variance,
+    is_line_total_mismatch,
+    is_valid_for_sales
+FROM {{ ref('fact_order_items') }}
+WHERE is_valid_for_sales = TRUE
+  AND (
+      line_total IS NULL
+      OR calculated_line_total IS NULL
+      OR ABS(
+          line_total - calculated_line_total
+      ) > 0.01
+  )

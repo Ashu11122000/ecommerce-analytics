@@ -15,11 +15,23 @@
 --   gross_sales_amount = quantity * unit_price
 --   net_sales_amount   = gross sales - discount + tax
 --
+-- Sales eligibility:
+--   An item is eligible for sales reporting when:
+--     1. Quantity is positive.
+--     2. Unit price, discount, and tax are non-null.
+--     3. Unit price is non-negative.
+--     4. Discount and tax are non-negative.
+--     5. The recorded and calculated line totals reconcile
+--        within 0.01.
+--
 -- Important assumptions:
 --   - Each order item belongs to one order and one product.
 --   - Amounts are expressed in the order's currency.
 --   - Net sales includes tax and is not tax-exclusive revenue.
---   - Return quantities and rates are inherited from Silver.
+--   - Source values are preserved for auditing.
+--   - Ineligible items receive NULL sales measures rather than
+--     being deleted or silently corrected.
+--   - Return attributes and source quality flags are preserved.
 --   - Incremental processing uses a seven-day timestamp lookback.
 --   - The LEFT JOIN preserves items if the parent order is missing.
 -- ============================================================
@@ -78,7 +90,7 @@ orders AS (
 fact_base AS (
 
     -- Step 3: Enrich each item with its parent order.
-    -- LEFT JOIN preserves the item if its order is missing.
+    -- LEFT JOIN preserves items with missing parent orders.
     SELECT
         oi.order_item_id,
 
@@ -103,18 +115,18 @@ fact_base AS (
         o.sales_channel,
         o.currency,
 
-        -- Quantity and pricing components.
+        -- Quantity and original pricing components.
         oi.quantity,
         oi.unit_price,
         oi.discount_amount,
         oi.tax_amount,
 
-        -- Source and calculated line totals.
+        -- Preserve source and calculated line totals.
         oi.line_total,
         oi.calculated_line_total,
-
-        -- Data-quality indicators inherited from Silver.
         oi.line_total_variance,
+
+        -- Source data-quality indicators.
         oi.is_line_total_mismatch,
         oi.has_negative_quantity,
 
@@ -124,26 +136,66 @@ fact_base AS (
         oi.has_excess_returned_quantity,
         oi.return_rate,
 
-        -- Gross sales before discounts and tax.
+        -- Step 4: Determine eligibility for sales reporting.
+        -- Original source values are not modified.
         CASE
-            WHEN oi.quantity IS NOT NULL
+            WHEN oi.quantity > 0
              AND oi.unit_price IS NOT NULL
+             AND oi.unit_price >= 0
+             AND oi.discount_amount IS NOT NULL
+             AND oi.discount_amount >= 0
+             AND oi.tax_amount IS NOT NULL
+             AND oi.tax_amount >= 0
+             AND oi.line_total IS NOT NULL
+             AND oi.calculated_line_total IS NOT NULL
+             AND ABS(
+                 oi.line_total::NUMERIC
+                 - oi.calculated_line_total::NUMERIC
+             ) <= 0.01
+            THEN TRUE
+            ELSE FALSE
+        END AS is_valid_for_sales,
+
+        -- Gross sales before discounts and tax.
+        -- Ineligible records remain present, but do not
+        -- contribute a sales measure.
+        CASE
+            WHEN oi.quantity > 0
+             AND oi.unit_price IS NOT NULL
+             AND oi.unit_price >= 0
+             AND oi.discount_amount IS NOT NULL
+             AND oi.discount_amount >= 0
+             AND oi.tax_amount IS NOT NULL
+             AND oi.tax_amount >= 0
+             AND oi.line_total IS NOT NULL
+             AND oi.calculated_line_total IS NOT NULL
+             AND ABS(
+                 oi.line_total::NUMERIC
+                 - oi.calculated_line_total::NUMERIC
+             ) <= 0.01
             THEN ROUND(
-                (
-                    oi.quantity::NUMERIC
-                    * oi.unit_price::NUMERIC
-                ),
+                oi.quantity::NUMERIC
+                * oi.unit_price::NUMERIC,
                 2
             )
             ELSE NULL
         END AS gross_sales_amount,
 
-        -- Net transaction amount after discount and including tax.
+        -- Net sales after discount and including tax.
         CASE
-            WHEN oi.quantity IS NOT NULL
+            WHEN oi.quantity > 0
              AND oi.unit_price IS NOT NULL
+             AND oi.unit_price >= 0
              AND oi.discount_amount IS NOT NULL
+             AND oi.discount_amount >= 0
              AND oi.tax_amount IS NOT NULL
+             AND oi.tax_amount >= 0
+             AND oi.line_total IS NOT NULL
+             AND oi.calculated_line_total IS NOT NULL
+             AND ABS(
+                 oi.line_total::NUMERIC
+                 - oi.calculated_line_total::NUMERIC
+             ) <= 0.01
             THEN ROUND(
                 (
                     oi.quantity::NUMERIC
@@ -169,7 +221,7 @@ fact_base AS (
 
 )
 
--- Step 4: Return the final Gold order-item fact.
+-- Step 5: Return the final Gold order-item fact.
 SELECT
     order_item_id,
     order_id,
@@ -189,8 +241,8 @@ SELECT
 
     line_total,
     calculated_line_total,
-
     line_total_variance,
+
     is_line_total_mismatch,
     has_negative_quantity,
 
@@ -199,6 +251,7 @@ SELECT
     has_excess_returned_quantity,
     return_rate,
 
+    is_valid_for_sales,
     gross_sales_amount,
     net_sales_amount,
 
@@ -213,8 +266,7 @@ FROM fact_base
 
 {% if is_incremental() %}
 
--- Step 5: Reprocess recently ingested or updated records.
--- The lookback allows recent source changes to be picked up.
+-- Step 6: Reprocess recently ingested or updated records.
 -- dbt merges matching rows using order_item_id as unique_key.
 WHERE
     ingested_at >= (

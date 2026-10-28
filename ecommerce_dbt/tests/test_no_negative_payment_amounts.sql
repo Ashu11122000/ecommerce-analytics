@@ -4,6 +4,6 @@
 
 SELECT
     payment_id,
-    payment_amount
+    amount
 FROM {{ ref('fact_payments') }}
-WHERE payment_amount < 0
+WHERE amount < 0

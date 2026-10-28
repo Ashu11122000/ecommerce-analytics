@@ -3,14 +3,10 @@
 File: dashboards/leadership/dashboard_queries.sql
 Purpose: Leadership and business performance reporting.
 
-Expected Gold models:
+Gold models:
   gold.fact_order_items
   gold.dim_date
   gold.dim_products
-
-Important:
-  Verify the exact schema and column names against your dbt models.
-  Financial measures must follow the definitions in the metrics catalog.
 */
 
 
@@ -39,8 +35,8 @@ FROM gold.fact_order_items;
 -- ============================================================
 
 SELECT
-    d.year,
-    d.month_number,
+    EXTRACT(YEAR FROM d.full_date)::INT AS year,
+    EXTRACT(MONTH FROM d.full_date)::INT AS month_number,
     d.month_name,
     SUM(f.gross_sales_amount) AS gross_sales,
     SUM(f.net_sales_amount) AS net_sales,
@@ -50,12 +46,12 @@ FROM gold.fact_order_items AS f
 JOIN gold.dim_date AS d
     ON f.order_date_key = d.date_key
 GROUP BY
-    d.year,
-    d.month_number,
+    EXTRACT(YEAR FROM d.full_date),
+    EXTRACT(MONTH FROM d.full_date),
     d.month_name
 ORDER BY
-    d.year,
-    d.month_number;
+    year,
+    month_number;
 
 
 -- ============================================================
@@ -71,7 +67,7 @@ SELECT
     COUNT(DISTINCT f.customer_id) AS unique_customers
 FROM gold.fact_order_items AS f
 JOIN gold.dim_products AS p
-    ON f.product_key = p.product_key
+    ON f.product_id = p.product_id
 GROUP BY
     p.category
 ORDER BY
@@ -84,7 +80,7 @@ ORDER BY
 -- ============================================================
 
 SELECT
-    p.product_key,
+    p.product_id,
     p.product_name,
     p.category,
     SUM(f.net_sales_amount) AS net_sales,
@@ -92,9 +88,9 @@ SELECT
     COUNT(DISTINCT f.order_id) AS total_orders
 FROM gold.fact_order_items AS f
 JOIN gold.dim_products AS p
-    ON f.product_key = p.product_key
+    ON f.product_id = p.product_id
 GROUP BY
-    p.product_key,
+    p.product_id,
     p.product_name,
     p.category
 ORDER BY
@@ -105,21 +101,20 @@ LIMIT 10;
 -- ============================================================
 -- QUERY 5: Month-over-Month and Year-over-Year Sales Growth
 -- Grain: One row per month
--- Note: Requires comparable historical periods.
 -- ============================================================
 
 WITH monthly_sales AS (
     SELECT
-        d.year,
-        d.month_number,
+        EXTRACT(YEAR FROM d.full_date)::INT AS year,
+        EXTRACT(MONTH FROM d.full_date)::INT AS month_number,
         SUM(f.net_sales_amount) AS net_sales,
         COUNT(DISTINCT f.order_id) AS total_orders
     FROM gold.fact_order_items AS f
     JOIN gold.dim_date AS d
         ON f.order_date_key = d.date_key
     GROUP BY
-        d.year,
-        d.month_number
+        EXTRACT(YEAR FROM d.full_date),
+        EXTRACT(MONTH FROM d.full_date)
 ),
 comparisons AS (
     SELECT
@@ -167,20 +162,19 @@ ORDER BY
 -- ============================================================
 -- QUERY 6: Three-Month Rolling Average of Monthly Sales
 -- Grain: One row per month
--- This is a historical smoothing measure, not a forecast by itself.
 -- ============================================================
 
 WITH monthly_sales AS (
     SELECT
-        d.year,
-        d.month_number,
+        EXTRACT(YEAR FROM d.full_date)::INT AS year,
+        EXTRACT(MONTH FROM d.full_date)::INT AS month_number,
         SUM(f.net_sales_amount) AS net_sales
     FROM gold.fact_order_items AS f
     JOIN gold.dim_date AS d
         ON f.order_date_key = d.date_key
     GROUP BY
-        d.year,
-        d.month_number
+        EXTRACT(YEAR FROM d.full_date),
+        EXTRACT(MONTH FROM d.full_date)
 )
 SELECT
     year,

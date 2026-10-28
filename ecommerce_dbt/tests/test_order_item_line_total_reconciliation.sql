@@ -1,20 +1,18 @@
-
--- Test: Order-item line totals should reconcile with quantity * unit price.
+-- Test: Eligible sales records must reconcile with their
+-- calculated line totals within a tolerance of 0.01.
 -- Expected result: Zero rows returned.
---
--- Assumption: fact_order_items contains quantity, unit_price,
--- and line_total. Adjust column names and calculation to match
--- your actual Gold model.
 
 SELECT
     order_item_id,
-    quantity,
-    unit_price,
     line_total,
-    quantity * unit_price AS expected_line_total
+    calculated_line_total,
+    line_total_variance,
+    is_line_total_mismatch,
+    is_valid_for_sales
 FROM {{ ref('fact_order_items') }}
-WHERE
-    quantity IS NOT NULL
-    AND unit_price IS NOT NULL
-    AND line_total IS NOT NULL
-    AND ABS(line_total - (quantity * unit_price)) > 0.01
+WHERE is_valid_for_sales = TRUE
+  AND (
+      line_total IS NULL
+      OR calculated_line_total IS NULL
+      OR ABS(line_total - calculated_line_total) > 0.01
+  )

@@ -9,17 +9,17 @@
 
 SELECT
     shipment_id,
-    shipment_date,
-    delivery_date,
+    shipped_at,
+    delivered_at,
     shipment_status
 FROM {{ ref('fact_shipments') }}
 WHERE
     (
-        shipment_date IS NOT NULL
-        AND delivery_date IS NOT NULL
-        AND delivery_date < shipment_date
+        shipped_at IS NOT NULL
+        AND delivered_at IS NOT NULL
+        AND delivered_at < shipped_at
     )
     OR (
         LOWER(TRIM(shipment_status)) = 'delivered'
-        AND delivery_date IS NULL
+        AND delivered_at IS NULL
     )
