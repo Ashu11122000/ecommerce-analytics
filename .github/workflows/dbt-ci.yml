@@ -1,0 +1,73 @@
+name: dbt CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  dbt-ci:
+    name: Validate dbt Project
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce_analytics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecommerce_analytics"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.github
+      DBT_HOST: localhost
+      DBT_PORT: 5432
+      DBT_USER: postgres
+      DBT_PASSWORD: postgres
+      DBT_DATABASE: ecommerce_analytics
+      DBT_SCHEMA: public
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dbt dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dbt-core==1.12.3 dbt-postgres==1.11.0
+
+      - name: Check dbt version
+        run: dbt --version
+
+      - name: Install dbt packages
+        working-directory: ecommerce_dbt
+        run: dbt deps
+
+      - name: Check dbt project
+        working-directory: ecommerce_dbt
+        run: dbt debug --profiles-dir "$DBT_PROFILES_DIR"
+
+      - name: Compile dbt models
+        working-directory: ecommerce_dbt
+        run: dbt compile --profiles-dir "$DBT_PROFILES_DIR"
+
+      - name: Run dbt models and tests
+        working-directory: ecommerce_dbt
+        run: dbt build --profiles-dir "$DBT_PROFILES_DIR"
