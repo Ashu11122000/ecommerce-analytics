@@ -1,253 +1,449 @@
 # E-Commerce Analytics Engineering Project
 
+An end-to-end analytics engineering project that transforms generated
+e-commerce data in PostgreSQL into tested, analytics-ready Gold models
+using dbt, documents a semantic layer, and delivers three Power BI
+dashboards for leadership, operations, and data-quality analysis.
+
+> **Project status:** Core data pipeline, Gold reporting models, SQL
+> analysis, semantic-layer documentation/validation, and three Power BI
+> dashboard pages have been developed. The final focus is
+> reproducibility, metric consistency, CI verification, and submission
+> documentation. See [Current Status and Validation](# current-status-and-validation).
+
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Evaluation Requirements](#evaluation-requirements)
+- [Technology Stack](#technology-stack)
+- [Architecture](#architecture)
+- [Repository Structure](#repository-structure)
+- [Data Sources and Ingestion](#data-sources-and-ingestion)
+- [PostgreSQL Schemas](#postgresql-schemas)
+- [dbt Transformation Layers](#dbt-transformation-layers)
+- [Gold Models and Grain](#gold-models-and-grain)
+- [Semantic Layer and Power BI
+  Model](#semantic-layer-and-power-bi-model)
+- [Metrics and Business Rules](#metrics-and-business-rules)
+- [Data Quality and Validation](#data-quality-and-validation)
+- [SQL Analysis and Dashboard
+  Queries](#sql-analysis-and-dashboard-queries)
+- [Power BI Dashboards](#power-bi-dashboards)
+- [Time Comparisons, Forecasting, and Anomaly
+  Analysis](#time-comparisons-forecasting-and-anomaly-analysis)
+- [Incremental Processing, Late Data, and
+  Backfills](#incremental-processing-late-data-and-backfills)
+- [Source Freshness, Audit Columns, and
+  Lineage](#source-freshness-audit-columns-and-lineage)
+- [Local Setup](#local-setup)
+- [Run the Pipeline](#run-the-pipeline)
+- [GitHub Actions CI](#github-actions-ci)
+- [Known Limitations and Risks](#known-limitations-and-risks)
+- [Final Validation Checklist](#final-validation-checklist)
+
 ## Project Overview
 
-This project is an end-to-end **Data Engineering and Analytics Engineering** project built using **PostgreSQL** and **dbt Core**.
+This project demonstrates an analytics engineering workflow built around
+PostgreSQL and dbt Core. Mock e-commerce data is generated with Python,
+loaded into raw PostgreSQL tables, transformed through Bronze, Silver,
+and Gold layers, validated with dbt tests and SQL checks, and consumed
+by Power BI dashboards.
 
-The project simulates a small but realistic e-commerce analytics pipeline where raw transactional data is loaded into PostgreSQL and transformed into analytics-ready datasets using dbt.
+The pipeline follows **ELT (Extract, Load, Transform)**: data is loaded
+into PostgreSQL before dbt performs transformations in the database.
 
-The complete pipeline follows an **ELT (Extract, Load, Transform)** approach and implements:
+The implementation demonstrates:
 
-- Raw OLTP-style source tables.
-- dbt source definitions.
-- Bronze, Silver, and Gold transformation layers.
-- Dimensional modeling.
-- A Star Schema.
-- Dimension and fact tables.
-- Data quality testing.
-- Generic and custom dbt tests.
-- Incremental processing.
-- Late-arriving data handling.
-- Backfill strategy.
+- Raw transactional source tables.
+- dbt source definitions and model dependencies.
+- Bronze, Silver, and Gold transformations.
+- Dimensional modeling and a Star Schema.
+- Fact-table grain and dimension relationships.
+- Generic and custom data quality tests.
+- Incremental processing for the order-item fact.
+- Late-arriving and updated-record scenarios.
+- A documented backfill approach.
 - Source freshness configuration.
-- Reusable dbt macros.
+- Reusable dbt macros and audit timestamps.
 - Analytical SQL queries.
-- Data lineage through dbt model dependencies.
-- Audit and technical timestamps.
+- Semantic metric definitions and validation.
+- Three Power BI report pages for different audiences.
+- A GitHub Actions workflow intended to validate the dbt project.
 
-The final Gold layer provides analytics-ready tables for reporting, dashboards, and business analysis.
+The dataset is synthetic and is intended for learning and evaluation,
+not to represent actual commercial performance.
 
----
+## Evaluation Requirements
 
-# Project Objectives
+The project is intended to satisfy an assignment requiring:
 
-The main goal is to build a simple but realistic analytics engineering pipeline.
+1.  A Git repository.
+2.  Analytics-ready Gold tables derived from dbt models.
+3.  Defined metrics and dimensions with documented grain.
+4.  A semantic layer or equivalent abstraction.
+5.  At least two dashboards for different personas.
+6.  A dashboard built using an accepted BI tool; this project uses Power
+    BI.
+7.  SQL queries backing the dashboard visuals.
+8.  Documentation of personas, business questions, metric definitions,
+    assumptions, walkthroughs, limitations, and risks.
 
-The project performs the following steps:
+Stretch goals include time-based comparisons (WoW/MoM/YoY), derived
+metrics, a forecast, and anomaly identification. The implementation
+includes time-comparison and forecast-analysis SQL files and a
+rolling-average Power BI visual. A rolling average is a smoothing
+measure, not by itself a future forecast; the final submission should
+clearly state whether a separate future forecast has been implemented
+and validated.
 
-1. Creates a PostgreSQL database.
-2. Creates raw OLTP-style source tables.
-3. Generates and loads mock e-commerce transactional data.
-4. Defines raw source tables in dbt.
-5. Transforms raw data into the Bronze layer.
-6. Cleans, standardizes, and enriches data in the Silver layer.
-7. Builds analytics-ready dimension and fact tables in the Gold layer.
-8. Applies data quality tests.
-9. Implements incremental processing for the order-item fact.
-10. Simulates late-arriving and updated data.
-11. Documents a backfill strategy.
-12. Runs analytical SQL queries on the Gold layer.
-13. Validates the project using dbt commands such as `dbt parse`, `dbt run`, `dbt test`, and `dbt build`.
-
----
-
-# Technology Stack
-
-| Technology | Purpose |
-| --- | --- |
-| PostgreSQL | Local relational database, raw source store, and transformation destination |
-| dbt Core | SQL-based transformation and analytics engineering framework |
-| dbt-postgres | PostgreSQL adapter for dbt |
-| Python | Mock data generation and local development environment |
-| SQL | Data definition, data loading, transformation, and analytics |
-| Jinja | dbt templating and reusable logic |
-| Git | Version control |
-| GitHub | Remote repository hosting |
-| PowerShell | Local development environment |
+## Technology Stack
 
 ---
 
-# Project Architecture
-
-```text
-                         MOCK / OLTP-STYLE DATA
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │   PostgreSQL    │
-                         │                 │
-                         │   RAW LAYER     │
-                         │                 │
-                         │ customers       │
-                         │ products        │
-                         │ orders          │
-                         │ order_items     │
-                         │ payments        │
-                         │ shipments       │
-                         │ returns         │
-                         └────────┬────────┘
-                                  │
-                                  │ dbt source()
-                                  ▼
-                         ┌─────────────────┐
-                         │  BRONZE LAYER   │
-                         │                 │
-                         │ Basic cleaning  │
-                         │ Standardization │
-                         │ Audit metadata  │
-                         └────────┬────────┘
-                                  │
-                                  │ dbt ref()
-                                  ▼
-                         ┌─────────────────┐
-                         │  SILVER LAYER   │
-                         │                 │
-                         │ Cleaned data    │
-                         │ Business rules │
-                         │ Derived fields │
-                         │ DQ logic        │
-                         └────────┬────────┘
-                                  │
-                                  │ dbt ref()
-                                  ▼
-                         ┌─────────────────┐
-                         │   GOLD LAYER    │
-                         │                 │
-                         │ Dimensions      │
-                         │ Facts           │
-                         │ Analytics-ready │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         Analytics / BI / SQL
-```
-
-The major transformation flow is:
-
-```text
-RAW
- ↓
-BRONZE
- ↓
-SILVER
- ↓
-GOLD
-```
-
-Cross-cutting engineering concerns include:
-
-```text
-Data Quality
-     │
-Lineage
-     │
-Freshness
-     │
-Incremental Processing
-     │
-Late-Arriving Data
-     │
-Backfills
-     │
-Audit Metadata
-```
+Technology Purpose
 
 ---
 
-# Data Engineering Lifecycle
+PostgreSQL 17.x Raw data storage and transformation
+destination
 
-```text
-Data Generation
-      ↓
-Data Ingestion
-      ↓
-Raw Storage
-      ↓
-Data Transformation
-      ↓
-Data Cleaning
-      ↓
-Business Logic
-      ↓
-Dimensional Modeling
-      ↓
-Data Quality Testing
-      ↓
-Analytics-Ready Tables
-      ↓
-Business Analysis
-```
+dbt Core 1.12.3 SQL transformation, model
+orchestration, and testing
 
----
+dbt-postgres 1.11.0 PostgreSQL adapter for dbt
 
-# ELT Architecture
+Python Mock data generation and utility
+scripts
 
-This project follows the **ELT workflow**:
+SQL Data definition, ingestion,
+transformation, validation, and
+analysis
 
-```text
-Extract
-   │
-   ▼
-Mock E-Commerce Data
-   │
-   ▼
-Load
-   │
-   ▼
-PostgreSQL RAW Tables
-   │
-   ▼
-Transform
-   │
-   ▼
-dbt Models
-   │
-   ▼
-Bronze → Silver → Gold
-```
+Jinja dbt templating and reusable macros
 
-Unlike a traditional ETL workflow, transformation is performed after the data has been loaded into PostgreSQL.
+Power BI Desktop Semantic model and interactive
+dashboards
 
-In this project:
+Git and GitHub Version control and repository
+hosting
 
-- Python generates the mock source data.
-- SQL loads the data into PostgreSQL.
-- dbt performs the transformations inside PostgreSQL.
+GitHub Actions Automated CI workflow for dbt
+validation
+
+Visual Studio Code Development environment
 
 ---
 
-# PostgreSQL Database
-
-The local PostgreSQL database is:
+Local repository path used during development:
 
 ```text
-ecommerce_analytics
+C:\Users\Ashish\ecommerce-analytics
 ```
 
-The database contains the raw schema and dbt-generated schemas:
+The database used during local validation is named
+`ecommerce_analytics`. Local connection settings may vary; do not commit
+passwords or private connection details.
+
+## Architecture
 
 ```text
-ecommerce_analytics
+Python mock-data generator
+          |
+          v
+Generated SQL / ingestion scripts
+          |
+          v
+PostgreSQL: ecommerce_analytics
+          |
+          v
+Raw schema (source tables)
+          |
+          | dbt source()
+          v
+Bronze models (standardization and technical metadata)
+          |
+          | dbt ref()
+          v
+Silver models (cleaning, business rules, derived fields, DQ flags)
+          |
+          | dbt ref()
+          v
+Gold models (facts and dimensions)
+          |
+          +--------------------+
+          |                    |
+          v                    v
+SQL analysis and validation   Power BI semantic model
+                               |
+                               v
+                 Leadership / Operations / Data Quality
+```
+
+Cross-cutting concerns include data quality, lineage, source freshness,
+audit metadata, incremental processing, late-arriving data, and backfill
+planning.
+
+## Repository Structure
+
+The structure below reflects the files visible in the current repository
+screenshots and the implementation context. Some generated folders and
+local files may be present locally but should not be committed.
+
+```text
+ecommerce-analytics/
 │
-├── raw
-├── analytics_bronze
-├── analytics_silver
-└── analytics_gold
+├── .github/
+│   ├── workflows/
+│   │   └── dbt-ci.yml
+│   └── profiles.yml                 # Optional CI-only profile; see CI section
+│
+├── .venv/                           # Local virtual environment; do not commit
+│
+├── dashboards/
+│   ├── leadership/
+│   │   ├── dashboard_queries.sql
+│   │   └── README.md
+│   └── operations/
+│       ├── dashboard_queries.sql
+│       └── README.md
+│
+├── docs/
+│   ├── anomaly_detection_methodology.md
+│   ├── architecture.md
+│   ├── backfill_strategy.md
+│   ├── dashboard_walkthrough.md
+│   ├── data_dictionary.md
+│   ├── data_lineage.md
+│   ├── data_model.md
+│   ├── data_quality.md
+│   ├── evaluation_checklist.md
+│   ├── forecasting_methodology.md
+│   ├── freshness_and_monitoring.md
+│   ├── incremental_processing.md
+│   ├── known_limitations.md
+│   ├── late_arriving_data.md
+│   ├── metric_definitions.md
+│   ├── model_grain.md
+│   └── project_overview.md
+│
+├── ecommerce_dbt/
+│   ├── analyses/
+│   │   ├── anomaly_analysis.sql
+│   │   ├── customer_analysis.sql
+│   │   ├── data_quantity_analysis.sql
+│   │   ├── forecast_analysis.sql
+│   │   ├── order_status_analysis.sql
+│   │   ├── payment_analysis.sql
+│   │   ├── return_analysis.sql
+│   │   ├── sales_performance_analysis.sql
+│   │   ├── shipping_performance_analysis.sql
+│   │   └── time_comparison_analysis.sql
+│   │
+│   ├── macros/
+│   │   ├── add_audit_columns.sql
+│   │   ├── calculate_date_key.sql
+│   │   ├── generate_schema_name.sql
+│   │   ├── generate_timestamp.sql
+│   │   ├── modeled_timestamp.sql
+│   │   ├── safe_divide.sql
+│   │   └── transformed_timestamp.sql
+│   │
+│   ├── models/
+│   │   ├── bronze/
+│   │   │   ├── bronze_customers.sql
+│   │   │   ├── bronze_order_items.sql
+│   │   │   ├── bronze_orders.sql
+│   │   │   ├── bronze_payments.sql
+│   │   │   ├── bronze_products.sql
+│   │   │   ├── bronze_returns.sql
+│   │   │   ├── bronze_shipments.sql
+│   │   │   └── bronze_schema.yml
+│   │   │
+│   │   ├── silver/
+│   │   │   ├── silver_customers.sql
+│   │   │   ├── silver_order_items.sql
+│   │   │   ├── silver_orders.sql
+│   │   │   ├── silver_payments.sql
+│   │   │   ├── silver_products.sql
+│   │   │   ├── silver_returns.sql
+│   │   │   ├── silver_shipments.sql
+│   │   │   └── silver_schema.yml
+│   │   │
+│   │   ├── gold/
+│   │   │   ├── dimensions/
+│   │   │   │   ├── dim_customers.sql
+│   │   │   │   ├── dim_date.sql
+│   │   │   │   └── dim_products.sql
+│   │   │   ├── facts/
+│   │   │   │   ├── fact_order_items.sql
+│   │   │   │   ├── fact_payments.sql
+│   │   │   │   ├── fact_returns.sql
+│   │   │   │   └── fact_shipments.sql
+│   │   │   └── gold_schema.yml
+│   │   │
+│   │   └── sources/
+│   │       └── sources.yml
+│   │
+│   ├── tests/
+│   │   ├── test_fact_order_unique_order_id.sql
+│   │   ├── test_fact_shipments_valid_delivery_days.sql
+│   │   ├── test_gold_revenue_reconciliation.sql
+│   │   ├── test_no_duplicate_order_items.sql
+│   │   ├── test_no_negative_payment_amounts.sql
+│   │   ├── test_order_item_line_total_reconciliation.sql
+│   │   ├── test_positive_order_item_values.sql
+│   │   └── test_return_quantity_validity.sql
+│   │
+│   ├── scripts/
+│   │   ├── check_database_connection.py
+│   │   ├── generate_raw_data.py
+│   │   ├── load_raw_data.py
+│   │   ├── run_pipeline.py
+│   │   └── validate_raw_data.py
+│   │
+│   ├── dbt_project.yml
+│   ├── packages.yml
+│   └── package-lock.yml
+│
+├── semantic_layer/
+│   ├── dimensions.md
+│   ├── join_rules.md
+│   ├── metric_definitions.md
+│   ├── metric_validation.sql
+│   ├── metrics_catalog.csv
+│   ├── model_grain.md
+│   └── README.md
+│
+├── sql/
+│   ├── analytics_queries/
+│   │   ├── anomaly_analysis.sql
+│   │   ├── customer_analysis.sql
+│   │   ├── forecast_analysis.sql
+│   │   ├── leadership_dashboards.sql
+│   │   ├── operations_dashboard.sql
+│   │   ├── order_status_analysis.sql
+│   │   ├── payment_analysis.sql
+│   │   ├── return_analysis.sql
+│   │   ├── sales_performance_analysis.sql
+│   │   ├── shipping_performance_analysis.sql
+│   │   └── time_comparison_analysis.sql
+│   ├── 01_create_database.sql
+│   ├── 02_create_raw_tables.sql
+│   ├── 03_insert_raw_data.sql
+│   ├── 04_add_ingested_at.sql
+│   └── 05_raw_data_quality_checks.sql
+│
+├── .env                             # Local secrets; do not commit
+├── .gitignore
+├── README.md
+├── requirements.txt
+└── set_dbt_password.bat             # Local helper; review for secrets before tracking
 ```
 
-Because dbt combines the configured target schema with model-level schema configuration, the generated schemas are named `analytics_bronze`, `analytics_silver`, and `analytics_gold` in the current project.
+**Important:** Treat this as the current documented structure, not a
+guarantee that every listed file is present in every checkout. Confirm
+the actual files with VS Code or `git status` before submission. The
+Power BI file `Ecommerce_Analytics_Dashboard.pbix` is a separate report
+artifact and should be included in the repository or delivered
+separately according to repository size and submission rules.
+
+Generated dbt directories such as `target/`, `logs/`, and
+`dbt_packages/`, Python caches, and the `.venv/` directory are
+generated/local artifacts rather than source code.
+
+## Data Sources and Ingestion
+
+The current pipeline uses generated mock e-commerce data rather than an
+external production dataset. The generator is designed to make the
+sample dataset reproducible and to introduce controlled data-quality and
+late-arriving-data scenarios.
+
+The source entities are:
+
+- Customers
+- Products
+- Orders
+- Order items
+- Payments
+- Shipments
+- Returns
+
+The earlier documented generator uses random seed `42`. The current
+scripts under `ecommerce_dbt/scripts/` are responsible for generating,
+loading, checking the database connection, validating raw data, and
+running the pipeline. Review the scripts to confirm the exact execution
+order and options before changing the pipeline.
+
+### Previously recorded source row counts
+
+The source-data workflow previously recorded these counts:
+
+Raw table Recorded rows
 
 ---
 
-# Database Schemas
+Customers 120
+Products 500
+Orders 320
+Order items 632
+Payments 320
+Shipments 290
+Returns 30
 
-## Raw
+These are historical recorded counts, not guaranteed counts after every
+generator run or data change. Validate the current database before using
+them in a report.
+
+### Controlled scenarios
+
+The earlier generator documentation records these scenarios:
+
+- Seven customer records with NULL phone values.
+- One product with inconsistent category casing.
+- One intentionally incorrect line total.
+- A late-arriving order (`order_id = 320`).
+- An updated order (`order_id = 10`).
+- The negative-quantity scenario was removed from the generator for
+  the earlier positive-value test.
+
+Later Gold-layer validation identified a negative quantity in a fact
+row. Treat this as a reason to re-run current checks rather than
+assuming older generator notes and current database results are
+identical.
+
+## PostgreSQL Schemas
+
+The database is named:
 
 ```text
-raw
+ecommerce_analytics
 ```
 
-Tables:
+The intended schemas are:
+
+---
+
+Schema Purpose
+
+---
+
+`raw` Ingested source tables
+
+`analytics_bronze` Source-oriented, lightly
+standardized dbt models
+
+`analytics_silver` Cleaned and enriched dbt models
+
+`analytics_gold` Analytics-ready facts and
+dimensions
+
+---
+
+The project's `generate_schema_name` macro and dbt configuration
+determine the final schema names. Verify `dbt_project.yml`, target
+profile, and the macro if schema names differ in another environment.
+
+### Raw tables
 
 ```text
 raw.customers
@@ -259,1385 +455,598 @@ raw.shipments
 raw.returns
 ```
 
-These simulate an **OLTP-style e-commerce source system**.
+The raw tables simulate an OLTP-style source system. Typical
+relationships include customers to orders, orders to order items, order
+items to products, and orders to payments and shipments.
 
-## Bronze
+## dbt Transformation Layers
 
-```text
-analytics_bronze
-```
+### Bronze
 
-Models:
+Bronze models read raw sources using `source()` and provide a consistent
+interface to downstream transformations. Typical operations include
+trimming and standardizing strings, handling appropriate NULL/default
+cases, retaining source-level fields, and adding technical metadata.
 
-```text
-bronze_customers
-bronze_products
-bronze_orders
-bronze_order_items
-bronze_payments
-bronze_shipments
-bronze_returns
-```
+Models include:
 
-Bronze models are dbt views.
+- `bronze_customers`
+- `bronze_products`
+- `bronze_orders`
+- `bronze_order_items`
+- `bronze_payments`
+- `bronze_shipments`
+- `bronze_returns`
 
-## Silver
+### Silver
 
-```text
-analytics_silver
-```
+Silver models clean, standardize, and enrich the Bronze data. The
+documented business and quality fields include customer age/tenure,
+product price and stock bands, order-status groups, payment-success
+flags, delivery duration, late-arriving-data indicators, calculated line
+totals, reconciliation variance, mismatch flags, and return metrics.
 
-Models:
+Models include:
 
-```text
-silver_customers
-silver_products
-silver_orders
-silver_order_items
-silver_payments
-silver_shipments
-silver_returns
-```
+- `silver_customers`
+- `silver_products`
+- `silver_orders`
+- `silver_order_items`
+- `silver_payments`
+- `silver_shipments`
+- `silver_returns`
 
-Silver models are dbt views.
+### Gold
 
-## Gold
+Gold models provide business-friendly facts and dimensions for
+analytical SQL and Power BI. Most Gold models are tables;
+`fact_order_items` has been configured as an incremental model. Confirm
+current materializations in `dbt_project.yml` and the model files.
 
-```text
-analytics_gold
-```
+## Gold Models and Grain
 
-Models:
-
-```text
-dim_customers
-dim_products
-dim_date
-fact_order_items
-fact_payments
-```
-
-Gold contains analytics-ready dimensional models. `fact_order_items` is incremental; the other Gold models are tables.
+The following grains describe the intended reporting model. Validate
+them against the current model SQL and uniqueness tests before treating
+them as enforced production guarantees.
 
 ---
 
-# Raw Data Model
-
-The current Raw layer contains **seven source tables**.
-
-## `raw.customers`
-
-Stores customer information.
-
-```text
-customer_id
-customer_name
-email
-phone
-gender
-date_of_birth
-city
-state
-country
-postal_code
-customer_segment
-customer_status
-signup_date
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-customer_id
-```
-
-## `raw.products`
-
-Stores product information.
-
-```text
-product_id
-product_name
-category
-subcategory
-brand
-supplier_id
-cost_price
-selling_price
-stock_quantity
-reorder_level
-product_status
-launch_date
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-product_id
-```
-
-## `raw.orders`
-
-Stores order-level information.
-
-```text
-order_id
-customer_id
-order_date
-order_status
-payment_status
-shipping_method
-shipping_cost
-discount_amount
-tax_amount
-total_amount
-sales_channel
-currency
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-order_id
-```
-
-Foreign key:
-
-```text
-customer_id → raw.customers.customer_id
-```
-
-## `raw.order_items`
-
-Stores individual product lines within orders.
-
-```text
-order_item_id
-order_id
-product_id
-quantity
-unit_price
-discount_amount
-tax_amount
-line_total
-returned_quantity
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-order_item_id
-```
-
-Foreign keys:
-
-```text
-order_id   → raw.orders.order_id
-product_id → raw.products.product_id
-```
-
-## `raw.payments`
-
-Stores payment transactions.
-
-```text
-payment_id
-order_id
-payment_date
-payment_method
-payment_status
-amount
-transaction_reference
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-payment_id
-```
-
-Foreign key:
-
-```text
-order_id → raw.orders.order_id
-```
-
-## `raw.shipments`
-
-Stores shipment information.
-
-```text
-shipment_id
-order_id
-shipping_method
-shipment_status
-shipped_at
-delivered_at
-delivery_city
-delivery_state
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-shipment_id
-```
-
-Foreign key:
-
-```text
-order_id → raw.orders.order_id
-```
-
-## `raw.returns`
-
-Stores product return information.
-
-```text
-return_id
-order_item_id
-return_date
-return_reason
-return_quantity
-refund_amount
-return_status
-updated_at
-ingested_at
-```
-
-Primary key:
-
-```text
-return_id
-```
-
-Foreign key:
-
-```text
-order_item_id → raw.order_items.order_item_id
-```
+Model Intended grain Main purpose
 
 ---
 
-# OLTP-Style Source Model
+`dim_customers` One row per customer Customer segmentation
+key and customer attributes
 
-```text
-customers
-    │
-    │ customer_id
-    ▼
-orders
-    │
-    │ order_id
-    ▼
-order_items
-    │
-    ├──────────────► products
-    │
-    └──────────────► returns
+`dim_products` One row per product key Product/category
+attributes
 
-orders
-  │
-  ├──────────────► payments
-  │
-  └──────────────► shipments
-```
+`dim_date` One row per calendar Time-based filtering
+date key and comparisons
 
-Business relationships:
+`fact_order_items` One row per order-item Sales, quantities,
+ID order-item quality, and
+product performance
 
-- One customer can place many orders.
-- One order can contain many order items.
-- One product can appear in many order items.
-- One order can have a payment record.
-- One order can have a shipment record.
-- An order item can have a return record.
+`fact_payments` One row per payment ID Payment amounts,
+methods, and status
+
+`fact_returns` One row per return ID Return quantities,
+reasons, statuses, and
+refunds
+
+`fact_shipments` One row per shipment ID Shipment status,
+delivery duration, and
+delay analysis
 
 ---
 
-# Controlled Source Data Volume
+### `fact_order_items`
 
-The current generated RAW dataset contains:
+The principal sales fact includes identifiers and date fields such as
+`order_item_id`, `order_id`, `customer_id`, `product_id`,
+`order_date_key`, and `order_date`. It also includes
+status/channel/currency attributes, quantity and price fields, discount
+and tax values, recorded and calculated line totals, variance and
+mismatch flags, returned quantities, return indicators, eligibility
+flags, financial measures, and technical timestamps.
 
-| Table | Records |
-| --- | ---: |
-| `customers` | **120** |
-| `products` | **500** |
-| `orders` | **320** |
-| `order_items` | **632** |
-| `payments` | **320** |
-| `shipments` | **290** |
-| `returns` | **30** |
+The intended grain is one product line within one order. Count distinct
+`order_id` for order counts; do not treat the number of order-item rows
+as the number of orders.
 
-The `order_items` count is 632 because the generator creates multiple product lines per order.
+### `fact_payments`
 
-The generator uses random seed:
+Represents payment transactions. Fields documented in the project
+include `payment_id`, `order_id`, `payment_date_key`, `payment_method`,
+`payment_status`, `amount`, `is_successful_payment`,
+transaction-reference indicators, and technical timestamps.
+
+### `fact_returns`
+
+Represents return records and supports analysis of return date, reason,
+quantity, refund amount, and status. Do not assume one return event per
+order item as a universal business rule merely because the current
+sample data happens to have unique item references.
+
+### `fact_shipments`
+
+Represents shipment records and supports status, shipping method,
+shipped/delivered timestamps, delivery location, delivery duration, and
+delay analysis.
+
+### Dimensions
+
+- `dim_customers`: customer descriptors and segmentation fields.
+- `dim_products`: product descriptors, category, pricing, stock, and
+  margin-related fields.
+- `dim_date`: date key, full date, year, quarter, month, week, day,
+  and calendar flags.
+
+The documented date key format is `YYYYMMDD`. The date dimension was
+originally described as being generated from the minimum and maximum
+order dates in `silver_orders`; confirm its current SQL and coverage
+before relying on it for payment, return, or shipment date analysis.
+
+## Semantic Layer and Power BI Model
+
+The semantic layer documents business-facing dimensions, join rules,
+metric definitions, and model grain. The
+`semantic_layer/metric_validation.sql` file contains SQL validation
+sections for key counts, financial calculations, reconciliation,
+payments, returns, shipments, and related checks. `metrics_catalog.csv`
+is intended to provide a metric catalogue.
+
+Power BI provides the current reporting semantic model over the Gold
+tables. Relationships recorded during model setup include:
+
+- `fact_order_items` to `dim_customers` (many-to-one).
+- `fact_order_items` to `dim_products` (many-to-one).
+- `fact_order_items` to `dim_date` through the order date key
+  (many-to-one).
+- `fact_payments` to `dim_date` through the payment date key
+  (many-to-one).
+- `fact_shipments` to `dim_date` through the shipment date key
+  (many-to-one).
+- `fact_returns` to `fact_order_items` through `order_item_id`.
+- A return-date relationship to `dim_date` was recorded as inactive.
+
+Recheck the saved PBIX model before submission because relationship
+names, active states, and cardinalities can change. An inactive
+return-date relationship requires explicit handling in measures or an
+alternative model design when analyzing by return date. Review the
+observed one-to-one returns-to-order-items cardinality if multiple
+return events per item should be supported.
+
+### Semantic consistency rules
+
+- Use explicit DAX measures for published metrics.
+- Count distinct orders when reporting orders.
+- Count distinct customers when reporting purchasing customers.
+- Use eligible sales records consistently for eligible financial and
+  unit metrics.
+- Do not equate payment rows with orders.
+- Do not add measures from different fact tables without considering
+  grain and possible duplication.
+- Document each metric's numerator, denominator, filters, time field,
+  and exclusions.
+- Distinguish gross sales, sales excluding tax, and final line total.
+- Document unknown and missing values rather than silently treating
+  them as zero.
+
+## Metrics and Business Rules
+
+Metric names in the Power BI model have included:
+
+- Gross Sales
+- Net Sales
+- Average Order Value
+- Purchasing Customers
+- Monthly Net Sales
+- MoM Sales Growth
+- 3-Month Rolling Average
+- Invalid Order Items
+- Line Total Mismatches
+- Negative Quantity Items
+- Latest Monthly Net Sales
+- Payment Success Rate
+- Total Payments
+- Delivered Shipments
+- Delayed Shipments
+- Returned Units
+- Total Refund Amount
+- Average Delivery Days
+- Monthly Data Quality Issues
+
+Verify the actual DAX definitions in the PBIX and align them with
+`semantic_layer/metric_definitions.md` and
+`semantic_layer/metrics_catalog.csv` before submission.
+
+### Sales calculations
+
+The documented intended calculation is:
 
 ```text
-42
+Gross sales = quantity × unit_price
+
+Calculated final line total
+    = (quantity × unit_price)
+      - discount_amount
+      + tax_amount
 ```
 
-This makes the mock dataset reproducible.
+The source `line_total` is retained for reconciliation. The current
+model's `net_sales_amount` has been observed to behave like the final
+line total, including tax. Therefore, do not label it "net sales
+excluding tax" unless the model is changed to follow that definition.
+
+The project should state explicitly whether "Net Sales" means sales
+after discounts and before tax, or final line total after tax. Apply the
+chosen definition consistently across dbt, SQL, DAX, dashboards, and
+documentation.
+
+### Example DAX patterns
+
+These are reference patterns, not a guarantee that they match the exact
+measures currently saved in the PBIX. Replace table names with the names
+displayed in Power BI and confirm the model columns and Boolean types.
+
+```dax
+Total Orders =
+CALCULATE(
+    DISTINCTCOUNT(gold_fact_order_items[order_id]),
+    gold_fact_order_items[is_valid_for_sales] = TRUE()
+)
+```
+
+```dax
+Purchasing Customers =
+CALCULATE(
+    DISTINCTCOUNT(gold_fact_order_items[customer_id]),
+    gold_fact_order_items[is_valid_for_sales] = TRUE()
+)
+```
+
+```dax
+Units Sold =
+CALCULATE(
+    SUM(gold_fact_order_items[quantity]),
+    gold_fact_order_items[is_valid_for_sales] = TRUE()
+)
+```
+
+```dax
+Average Order Value =
+DIVIDE([Net Sales], [Total Orders], 0)
+```
+
+Average Order Value is meaningful only when `[Net Sales]` and
+`[Total Orders]` use compatible eligibility rules and the agreed
+financial definition.
+
+## Data Quality and Validation
+
+The project uses dbt generic tests such as `not_null`, `unique`, and
+`relationships`, along with singular SQL tests for business rules and
+reconciliation. The tests directory includes checks for order-item
+uniqueness, valid shipment delivery days, revenue reconciliation,
+duplicate order items, negative payment amounts, line-total
+reconciliation, positive order-item values, and return quantity
+validity.
+
+### Recorded Gold-layer validation results
+
+The following figures were recorded during a prior validation session.
+Re-run the SQL against the current database before using them as final
+deliverable results.
+
+Check Recorded result
 
 ---
 
-# Controlled Data Quality Scenarios
+`fact_order_items` rows 644
+Distinct order-item IDs 644
+Eligible-for-sales rows 642
+Invalid-for-sales rows 2
+Total units across all rows 1,976
+Units across eligible rows 1,975
+Line-total mismatch rows 2
+Negative-quantity rows 1
+Eligible orders with sales 320
+Gross sales 25,281,271.32
+Current line-total-based net sales 25,347,841.41
+Average net sales per order 79,212.00
+Payment rows 320
+Successful payment records 224
+Payment success rate 70%
+Return rows 30
+Returned units 61
+Refund total 767,215.84
+Shipment rows 290
+Delivered shipments 165
+Shipments not delivered 125
+Delayed shipments with known status 45
+Not-delayed shipments with known status 120
+Shipments with unknown delay flags 125
+Average delivery duration for delivered shipments 3.89 days
 
-The generated source data demonstrates:
+### Sales eligibility
 
-| Scenario | Current Result |
-| --- | --- |
-| NULL customer phones | **7 records** |
-| Inconsistent product category casing | **1 record** |
-| Negative quantities | **0 records** |
-| Incorrect line total | **1 record** |
-| Late-arriving order | **order_id = 320** |
-| Updated order | **order_id = 10** |
+The recorded eligibility rules require positive quantity and
+non-negative, present financial inputs, a present line total, and
+reconciliation between the recorded and calculated line total within a
+tolerance of `0.01`. Invalid rows are retained for audit and flagged;
+financial measures are null for invalid rows.
 
-The negative-quantity scenario was removed from the generator so that the final positive-value custom test passes.
+### Recorded anomalies
 
-The incorrect line-total scenario remains intentionally so the Silver layer can demonstrate reconciliation logic.
+Two example order items were identified in a validation session:
 
----
+- **Order item 1011:** quantity `-1`, recorded line total `74,608.14`,
+  calculated line total `-15,048.54`, variance `89,656.68`; flagged as
+  a mismatch and invalid for sales.
+- **Order item 1041:** quantity `2`, recorded line total `54,205.32`,
+  calculated line total `53,705.32`, variance `500.00`; flagged as a
+  mismatch and invalid for sales.
 
-# Medallion Architecture
+These are historical observed values. Confirm that the current database
+still contains the same records before using them as current findings.
 
-The project uses a simplified **Medallion Architecture**:
+### Payment, return, and shipment caveats
 
-```text
-RAW
- ↓
-BRONZE
- ↓
-SILVER
- ↓
-GOLD
-```
+- Payment success rate was calculated as 224 successful payment
+  records out of 320 payment rows.
+- Payment amounts and sales totals represent different business events
+  and are not expected to match automatically.
+- The recorded return fact had 30 records and 30 distinct order-item
+  references; this is a property of the current sample, not
+  necessarily a universal business rule.
+- The recorded shipment delay rate was `45 / (45 + 120) = 27.27%`,
+  using only the 165 shipments with known delay status.
+- 125 shipment records had unknown delay flags and missing delivery
+  durations in the recorded validation.
 
-Each layer has a different responsibility.
+## SQL Analysis and Dashboard Queries
 
-## Raw
-
-The Raw layer stores source data close to its original structure.
-
-Responsibilities:
-
-- Store ingested data.
-- Preserve source-level structure.
-- Represent transactional data.
-- Provide the starting point for dbt transformations.
-- Preserve ingestion and update metadata.
-
-## Bronze
-
-Responsibilities:
-
-- Read source tables through `source()`.
-- Perform basic cleaning.
-- Standardize values.
-- Handle simple NULL/default cases where appropriate.
-- Preserve source-oriented structure.
-- Add technical metadata.
-- Provide a controlled interface between Raw and downstream models.
-
-Examples:
-
-```sql
-TRIM()
-LOWER()
-INITCAP()
-COALESCE()
-NULLIF()
-```
-
-Example:
-
-```sql
-LOWER(TRIM(email))
-```
-
-This removes surrounding whitespace and standardizes email casing.
-
-Bronze generally contains minimal business logic.
-
-## Silver
-
-Responsibilities:
-
-- Clean and standardize data.
-- Apply business rules.
-- Create derived business attributes.
-- Calculate analytical helper metrics.
-- Add data-quality indicators.
-- Prepare reusable datasets for Gold.
-
-Examples:
-
-```text
-customer_age
-age_group
-customer_tenure_days
-customer_status_group
-profit_amount
-profit_margin_pct
-stock_status
-price_band
-order_status_group
-is_payment_successful
-is_late_arriving
-ingestion_delay_days
-calculated_line_total
-line_total_variance
-is_line_total_mismatch
-has_negative_quantity
-has_return
-return_rate
-payment_status_group
-delivery_days
-delivery_speed
-is_delivery_delayed
-```
-
-## Gold
-
-The Gold layer contains analytics-ready models:
-
-```text
-dim_customers
-dim_products
-dim_date
-fact_order_items
-fact_payments
-```
-
-It is designed for reporting, BI, dashboards, aggregation, and business analysis.
+The dbt analyses directory contains:
 
 ---
 
-# Gold Dimensional Model
-
-## `dim_customers`
-
-Purpose:
-
-```text
-Who is the customer?
-```
-
-Important fields:
-
-```text
-customer_id
-customer_name
-email
-gender
-age_group
-city
-state
-country
-postal_code
-customer_segment
-customer_status_group
-signup_date
-customer_age
-customer_tenure_days
-is_active_customer
-customer_lifecycle_stage
-ingested_at
-loaded_at
-transformed_at
-modeled_at
-```
-
-## `dim_products`
-
-Purpose:
-
-```text
-What product is involved?
-```
-
-Important fields:
-
-```text
-product_id
-product_name
-category
-subcategory
-brand
-supplier_id
-cost_price
-selling_price
-profit_amount
-profit_margin_pct
-profit_margin_band
-stock_quantity
-reorder_level
-stock_status
-price_band
-product_status
-is_active_product
-launch_date
-ingested_at
-loaded_at
-transformed_at
-modeled_at
-```
-
-## `dim_date`
-
-Purpose:
-
-```text
-When did the business event happen?
-```
-
-Important fields:
-
-```text
-date_key
-full_date
-year
-quarter
-month
-month_name
-week_of_year
-day_of_month
-day_of_week
-day_name
-is_weekend
-is_month_end
-quarter_label
-month_label
-modeled_at
-```
-
-The date key uses:
-
-```text
-YYYYMMDD
-```
-
-For example:
-
-```text
-20260910
-```
-
-The current date dimension is generated from the minimum and maximum order dates in `silver_orders`.
+File Intended analysis
 
 ---
 
-# Fact Tables
+`anomaly_analysis.sql` Unusual values and quality
+anomalies
 
-## `fact_order_items`
+`customer_analysis.sql` Customer purchasing and sales
+patterns
 
-This is the primary sales fact.
+`data_quantity_analysis.sql` Row counts, quantity distribution,
+and volume checks
 
-### Grain
+`forecast_analysis.sql` Forecast/rolling-average analysis
 
-> **One row represents one product line within one order.**
+`order_status_analysis.sql` Order status distribution
 
-Example:
+`payment_analysis.sql` Payment amounts, methods, and
+statuses
 
-```text
-Order 1001
-    ├── Product A
-    ├── Product B
-    └── Product C
-```
+`return_analysis.sql` Return quantities, reasons, and
+refunds
 
-creates three rows in:
+`sales_performance_analysis.sql` Sales performance
 
-```text
-fact_order_items
-```
+`shipping_performance_analysis.sql` Shipment and delivery performance
 
-### Keys
-
-```text
-order_item_id
-order_id
-customer_id
-product_id
-order_date_key
-```
-
-### Measures
-
-```text
-quantity
-unit_price
-discount_amount
-tax_amount
-line_total
-calculated_line_total
-net_sales_amount
-gross_sales_amount
-```
-
-### Data-quality fields
-
-```text
-line_total_variance
-is_line_total_mismatch
-has_negative_quantity
-returned_quantity
-has_return
-return_rate
-```
-
-### Technical fields
-
-```text
-updated_at
-ingested_at
-loaded_at
-transformed_at
-modeled_at
-```
-
-## Sales Calculations
-
-Gross sales:
-
-```text
-quantity × unit_price
-```
-
-Net line amount including tax:
-
-```text
-(quantity × unit_price)
-- discount_amount
-+ tax_amount
-```
-
-The source `line_total` is retained so that it can be reconciled against the calculated value.
-
-## `fact_payments`
-
-Represents payment transactions.
-
-Important fields:
-
-```text
-payment_id
-order_id
-payment_date_key
-payment_method
-payment_status
-payment_status_group
-amount
-is_successful_payment
-has_transaction_reference
-payment_amount_band
-payment_update_delay_days
-updated_at
-ingested_at
-loaded_at
-transformed_at
-modeled_at
-```
+`time_comparison_analysis.sql` Time-based comparisons
 
 ---
 
-# Star Schema
+Root-level `sql/analytics_queries/` contains corresponding reporting
+queries, including `leadership_dashboards.sql` and
+`operations_dashboard.sql`. Dashboard-specific SQL is also stored in
+`dashboards/leadership/dashboard_queries.sql` and
+`dashboards/operations/dashboard_queries.sql`.
 
-```text
-                         dim_customers
-                              │
-                              │ customer_id
-                              ▼
-                       fact_order_items
-                       /       │                             /        │                             ▼         ▼         ▼
-              dim_products  dim_date   measures
-                 product_id  date_key
-```
+Compilation does not guarantee that every analysis query has been
+executed against the current database. Execute the relevant queries and
+record the actual results before final submission. Each visual should
+map to a documented metric or SQL query.
 
-The Gold layer also contains:
+## Power BI Dashboards
 
-```text
-fact_payments
-      │
-      └── dim_date
-```
+The report contains three pages aimed at different audiences. The PBIX
+file is named `Ecommerce_Analytics_Dashboard.pbix` in the project
+context; confirm its final location before linking it from the
+repository.
 
-The Star Schema provides a business-friendly analytical structure.
+### 1. E-Commerce Business & Leadership Overview
 
----
+**Persona:** Business leaders and management.
 
-# Why Gold Is Less Normalized
+**Business questions:**
 
-The Raw/OLTP-style model separates entities to support transactional consistency.
+- What sales value and order volume are represented in the data?
+- How many customers purchased?
+- Which product categories and products contribute the most sales?
+- How does monthly sales performance change?
+- What does month-over-month growth indicate?
 
-The Gold layer is designed for analytical access.
+**Recorded visuals:**
 
-Therefore Gold intentionally uses a dimensional and more denormalized structure:
+- KPI cards: Total Orders, Purchasing Customers, Units Sold, Gross
+  Sales, Net Sales, Average Order Value.
+- Monthly Net Sales Trend.
+- Net Sales by Product Category.
+- Top Products by Net Sales.
+- Month-over-Month Sales Growth.
 
-```text
-Dimensions
-    +
-Facts
-```
+The dashboard uses distinct order counts rather than treating every
+order-item line as a separate order. Use the same sales eligibility and
+financial definition across all visuals.
 
-The objective is analytical usability and efficient access rather than minimizing every repeated attribute.
+### 2. Operations & Analytics
 
----
+**Persona:** Operations, payment, shipping, and customer-service
+analysts.
 
-# dbt Project Structure
+**Business questions:**
 
-```text
-ecommerce-analytics-engineering/
-│
-├── .venv/
-├── .gitignore
-├── README.md
-├── requirements.txt
-│
-├── docs/
-│   ├── architecture.md
-│   ├── data_model.md
-│   └── backfill_strategy.md
-│
-├── sql/
-│   ├── 01_create_database.sql
-│   ├── 02_create_raw_tables.sql
-│   ├── 03_insert_raw_data.sql
-│   ├── 04_add_ingested_at.sql
-│   └── analytics_queries.sql
-│
-├── scripts/
-│   └── generate_raw_data.py
-│
-└── ecommerce_dbt/
-    │
-    ├── dbt_project.yml
-    ├── packages.yml
-    │
-    ├── models/
-    │   ├── sources/
-    │   │   └── sources.yml
-    │   │
-    │   ├── bronze/
-    │   │   ├── bronze_customers.sql
-    │   │   ├── bronze_products.sql
-    │   │   ├── bronze_orders.sql
-    │   │   ├── bronze_order_items.sql
-    │   │   ├── bronze_payments.sql
-    │   │   ├── bronze_shipments.sql
-    │   │   ├── bronze_returns.sql
-    │   │   └── bronze_schema.yml
-    │   │
-    │   ├── silver/
-    │   │   ├── silver_customers.sql
-    │   │   ├── silver_products.sql
-    │   │   ├── silver_orders.sql
-    │   │   ├── silver_order_items.sql
-    │   │   ├── silver_payments.sql
-    │   │   ├── silver_shipments.sql
-    │   │   ├── silver_returns.sql
-    │   │   └── silver_schema.yml
-    │   │
-    │   └── gold/
-    │       ├── dimensions/
-    │       │   ├── dim_customers.sql
-    │       │   ├── dim_products.sql
-    │       │   └── dim_date.sql
-    │       │
-    │       ├── facts/
-    │       │   ├── fact_order_items.sql
-    │       │   └── fact_payments.sql
-    │       │
-    │       └── gold_schema.yml
-    │
-    ├── macros/
-    │   ├── add_audit_columns.sql
-    │   ├── generate_timestamp.sql
-    │   ├── modeled_timestamp.sql
-    │   └── transformed_timestamp.sql
-    │
-    ├── tests/
-    │   └── test_positive_order_item_values.sql
-    │
-    └── analyses/
-        └── data_quantity_analysis.sql
-```
+- What is the order-status distribution?
+- What are the payment status and success patterns?
+- Which return reasons occur most often?
+- How many shipments are delivered, delayed, or still in other
+  statuses?
+- What is the refund amount and observed delivery duration?
 
-Generated directories such as `target/`, `logs/`, and `dbt_packages/` may exist locally but should not be treated as source code.
+**Recorded visuals:**
+
+- KPI cards: Payment Success Rate, Delivered Shipments, Delayed
+  Shipments, Returned Units, Total Refunded Amount, Average Delivery
+  Days.
+- Order Status Distribution.
+- Payment Status Analysis.
+- Returns by Reason.
+- Shipping Performance by Status.
+
+Disclose the unknown shipment-delay status and ensure each metric uses
+the correct fact-table grain.
+
+### 3. Data Quality & Forecasting
+
+**Persona:** Analytics engineers and data-quality analysts.
+
+**Business questions:**
+
+- How many order items are invalid?
+- How many line totals fail reconciliation?
+- Are negative quantities present?
+- In which months were quality issues detected?
+- How does monthly sales compare with its rolling average?
+- Which unusual changes require investigation?
+
+**Recorded visuals:**
+
+- KPI cards: Invalid Order Items, Line Total Mismatches, Negative
+  Quantity Items, Latest Monthly Net Sales.
+- Monthly Data Quality Issues by Year and Month.
+- Monthly Net Sales versus 3-Month Rolling Average.
+
+The X-axis was configured chronologically rather than grouping the same
+month name across different years. The rolling-average line is a
+historical smoothing metric, not automatically a forecast.
+
+### Dashboard query mapping
+
+Maintain the following mapping in the dashboard walkthrough
+documentation:
 
 ---
 
-# dbt Sources
-
-Source configuration:
-
-```text
-ecommerce_dbt/models/sources/sources.yml
-```
-
-Configured source tables:
-
-```text
-customers
-products
-orders
-order_items
-payments
-shipments
-returns
-```
-
-Example:
-
-```jinja
-{{ source('raw', 'customers') }}
-```
-
-This references:
-
-```text
-raw.customers
-```
-
-Source definitions provide:
-
-- Clear source documentation.
-- Dependency information.
-- Source-level testing.
-- Freshness configuration.
-- Lineage visibility.
+Dashboard Query file
 
 ---
 
-# dbt Model Dependencies
+Leadership `dashboards/leadership/dashboard_queries.sql`
 
-```text
-source()
-   ↓
-Bronze
-   ↓
-ref()
-   ↓
-Silver
-   ↓
-ref()
-   ↓
-Gold
-```
+Operations `dashboards/operations/dashboard_queries.sql`
 
-Example:
-
-```text
-raw.orders
-    ↓
-bronze_orders
-    ↓
-silver_orders
-    ↓
-fact_order_items
-```
-
-Another example:
-
-```text
-raw.products
-    ↓
-bronze_products
-    ↓
-silver_products
-    ↓
-dim_products
-    ↓
-fact_order_items
-```
-
-dbt automatically uses these dependencies to determine build order.
+Data quality and forecasting Relevant queries in `sql/analytics_queries/`
+and `ecommerce_dbt/analyses/`
 
 ---
 
-# `source()` vs `ref()`
+Document the exact query and measure for each visual, including filters,
+denominator, time field, and any exclusions.
 
-## `source()`
+## Time Comparisons, Forecasting, and Anomaly Analysis
 
-Used for external/source relations:
+### Time comparisons
 
-```sql
-{{ source('raw', 'orders') }}
-```
+The project includes `time_comparison_analysis.sql` and a Power BI
+month-over-month sales growth measure. Ensure the date dimension covers
+the required periods and that the visual uses a chronological date
+field. WoW, MoM, and YoY metrics should only be reported when the model
+has sufficient data and the period definitions are clear.
 
-## `ref()`
+### Rolling average and forecast
 
-Used for another dbt model:
+The Data Quality & Forecasting page compares monthly net sales with a
+three-month rolling average. Confirm that the DAX or SQL window includes
+the intended current and prior months and handles the first months of
+the series appropriately.
 
-```sql
-{{ ref('silver_orders') }}
-```
+A rolling average describes recent historical behavior. If a future
+forecast is added, document the method, forecast horizon, assumptions,
+and limitations. Do not describe the rolling-average line as a future
+prediction.
 
-`ref()` creates a dependency between dbt models and allows dbt to build them in the correct order and expose lineage.
+### Anomaly analysis
 
----
+Anomaly work focuses on unexpected sales changes and data-quality
+exceptions such as invalid quantities or line-total mismatches. Document
+whether each anomaly is rule-based (for example, a reconciliation
+tolerance) or statistically detected. Explain the impact and the
+follow-up needed rather than assuming every spike is an error.
 
-# dbt Configuration
+## Incremental Processing, Late Data, and Backfills
 
-The project uses:
+### Incremental model
 
-```yaml
-models:
-  ecommerce_dbt:
-    bronze:
-      +schema: bronze
-      +materialized: view
+`fact_order_items` is documented as an incremental dbt model with
+`order_item_id` as its unique key. The model uses `ingested_at` and
+`updated_at` to identify records that may be new or changed.
 
-    silver:
-      +schema: silver
-      +materialized: view
+The documented approach is conceptually based on newer ingestion or
+update timestamps. Independent maximum-timestamp comparisons can miss
+edge cases with out-of-order events or updates. The project describes
+this as a learning implementation rather than production-grade CDC.
 
-    gold:
-      +schema: gold
-      +materialized: table
-```
+### Late-arriving data
 
-Therefore:
+The generator documentation records a late-arriving order with
+`order_id = 320`, with an earlier business event time and later
+update/ingestion timestamps. This demonstrates that business event time
+differs from ingestion time.
 
-```text
-Bronze → view
-Silver → view
-Gold → table
-```
+### Updated records
 
-`fact_order_items` overrides the Gold default and uses incremental materialization.
+The project also records an updated order (`order_id = 10`) to
+demonstrate that incremental logic must account for changes, not only
+inserts.
 
----
+### Backfills and full refresh
 
-# dbt Materializations
+The backfill strategy is documented in `docs/backfill_strategy.md`. A
+full refresh is useful when historical transformations need rebuilding,
+incremental state is stale, or model logic changes significantly.
 
-The project uses:
-
-- **View** for Bronze.
-- **View** for Silver.
-- **Table** for most Gold models.
-- **Incremental** for `fact_order_items`.
-
-Views are useful for lightweight transformation layers.
-
-Tables are useful for persisted analytics-ready Gold models.
-
-Incremental materialization is useful for continuously growing transactional facts.
-
----
-
-# Incremental Processing
-
-The Gold fact table:
-
-```text
-analytics_gold.fact_order_items
-```
-
-is implemented as an incremental dbt model.
-
-Configuration:
-
-```sql
-{{
-    config(
-        materialized='incremental',
-        unique_key='order_item_id'
-    )
-}}
-```
-
-The model processes eligible new or changed source records rather than rebuilding the complete fact on every normal incremental run.
-
----
-
-# Current Incremental Strategy
-
-The current model uses both:
-
-```text
-ingested_at
-updated_at
-```
-
-Conceptually:
-
-```sql
-WHERE
-    oi.ingested_at > MAX(ingested_at)
-OR
-    oi.updated_at > MAX(updated_at)
-```
-
-This allows records with newer ingestion timestamps or newer update timestamps to qualify for processing.
-
-The strategy is suitable for demonstrating incremental processing but is intentionally simpler than a production CDC implementation.
-
----
-
-# Important Incremental Limitation
-
-Independent maximum timestamp comparisons can have edge cases with out-of-order records and updates.
-
-A production implementation could use:
-
-- Lookback windows.
-- Watermarks.
-- CDC.
-- MERGE strategies.
-- More robust source-specific change tracking.
-- Better handling of late updates.
-
----
-
-# Full Refresh
-
-Use:
+Run a full refresh only when appropriate for the target environment and
+data volume:
 
 ```powershell
 dbt run --full-refresh
 ```
 
-For Gold:
+To rebuild only the Gold selection, verify the selector against the
+current model paths before running:
 
 ```powershell
 dbt run --select gold --full-refresh
 ```
 
-A full refresh is useful when:
+A full refresh rebuilds model data; it does not by itself repair
+incorrect source data or guarantee that every downstream process has
+been backfilled.
 
-- Transformation logic changes significantly.
-- Historical data needs correction.
-- Incremental state is stale or corrupted.
-- Incremental logic changes.
-- A complete historical rebuild is required.
+## Source Freshness, Audit Columns, and Lineage
 
-The project used a Gold full refresh after regenerating RAW data to ensure the incremental fact did not retain stale records from the previous RAW state.
+### Source freshness
 
----
-
-# Late-Arriving Data
-
-The project simulates:
-
-```text
-order_id = 320
-```
-
-with:
-
-```text
-order_date  = 2026-08-01 10:00:00
-updated_at  = 2026-09-06 09:30:00
-ingested_at = 2026-09-07 08:15:00
-```
-
-This demonstrates:
-
-```text
-Business Event Time
-        ≠
-Ingestion Time
-```
-
-A pipeline must account for records arriving after their business event date.
-
----
-
-# Updated Data Simulation
-
-The project also simulates an updated order:
-
-```text
-order_id = 10
-```
-
-with:
-
-```text
-updated_at = 2026-09-05 11:00:00
-ingested_at = 2026-09-05 12:00:00
-```
-
-This demonstrates that an incremental pipeline must account for changed records, not only newly inserted records.
-
----
-
-# Backfill
-
-A backfill means reprocessing historical data.
-
-Examples:
-
-```text
-Historical data was missing
-        ↓
-Historical data arrives
-        ↓
-Historical data is processed
-```
-
-or:
-
-```text
-Transformation logic was incorrect
-        ↓
-Logic is fixed
-        ↓
-Historical data is reprocessed
-```
-
-The project documents a backfill strategy in:
-
-```text
-docs/backfill_strategy.md
-```
-
-A complete rebuild can be performed using:
-
-```powershell
-dbt run --full-refresh
-```
-
----
-
-# Ingestion Time vs Business Time
-
-Important timestamps:
-
-```text
-order_date
-ingested_at
-updated_at
-```
-
-`order_date` represents the business event.
-
-`ingested_at` represents when the record entered the raw pipeline/database.
-
-`updated_at` represents when the source record was last changed.
-
-These fields support:
-
-- Incremental processing.
-- Late-arriving data handling.
-- Freshness monitoring.
-- Troubleshooting.
-- Auditability.
-
----
-
-# Audit Columns
-
-The project uses:
-
-```text
-ingested_at
-loaded_at
-transformed_at
-modeled_at
-```
-
-These fields provide technical metadata about the movement and processing of data through the pipeline.
-
----
-
-# Data Quality
-
-Data quality validation covers:
-
-- Required fields.
-- Key uniqueness.
-- Referential integrity.
-- Business rules.
-- Invalid quantities.
-- Monetary reconciliation.
-- Source freshness.
-
----
-
-# dbt Generic Tests
-
-The project uses common dbt tests such as:
-
-```text
-not_null
-unique
-relationships
-```
-
-Additional accepted-value or business-rule tests can be added where required.
-
----
-
-# Not Null Tests
-
-Example:
-
-```yaml
-- name: customer_id
-  data_tests:
-    - not_null
-```
-
-This validates that the field contains no NULL values.
-
----
-
-# Unique Tests
-
-Example:
-
-```yaml
-- name: customer_id
-  data_tests:
-    - not_null
-    - unique
-```
-
-This validates identifier uniqueness.
-
----
-
-# Relationship Tests
-
-Examples:
-
-```text
-silver_order_items.order_id
-          ↓
-silver_orders.order_id
-```
-
-```text
-silver_orders.customer_id
-          ↓
-silver_customers.customer_id
-```
-
-```text
-silver_order_items.product_id
-          ↓
-silver_products.product_id
-```
-
-Gold relationships include:
-
-```text
-fact_order_items.customer_id
-          ↓
-dim_customers.customer_id
-```
-
-```text
-fact_order_items.product_id
-          ↓
-dim_products.product_id
-```
-
-```text
-fact_order_items.order_date_key
-          ↓
-dim_date.date_key
-```
-
-```text
-fact_payments.payment_date_key
-          ↓
-dim_date.date_key
-```
-
-Relationship tests help detect orphan records.
-
----
-
-# Singular Data Test
-
-The current custom test is:
-
-```text
-tests/test_positive_order_item_values.sql
-```
-
-It checks:
-
-```sql
-WHERE quantity <= 0
-   OR unit_price <= 0
-```
-
-A dbt test passes when the test query returns zero violating records.
-
-The negative quantity scenario was removed from the generator so that this test passes against the final dataset.
-
----
-
-# Incorrect Line Total Detection
-
-One source order-item record intentionally contains an incorrect `line_total`.
-
-The Silver layer calculates:
-
-```text
-calculated_line_total
-```
-
-using:
-
-```text
-(quantity × unit_price)
-- discount_amount
-+ tax_amount
-```
-
-It then calculates:
-
-```text
-line_total_variance
-```
-
-and flags material differences using:
-
-```text
-is_line_total_mismatch
-```
-
-This demonstrates reconciliation-style data quality logic.
-
----
-
-# Source Freshness
-
-Source freshness is configured in:
-
-```text
-ecommerce_dbt/models/sources/sources.yml
-```
-
-The configured timestamp field is:
-
-```text
-ingested_at
-```
-
-The conceptual thresholds are:
-
-```text
-Warning → 24 hours
-Error   → 48 hours
-```
+Freshness is configured in `ecommerce_dbt/models/sources/sources.yml`,
+with `ingested_at` documented as the timestamp field and conceptual
+thresholds of 24 hours for warning and 48 hours for error.
 
 Run:
 
@@ -1645,1122 +1054,311 @@ Run:
 dbt source freshness
 ```
 
-Freshness monitoring identifies whether upstream source data is arriving within the expected period.
+The command is only meaningful when the source tables and freshness
+configuration are available and the timestamps reflect the intended
+arrival semantics. For synthetic local data, old timestamps can trigger
+warnings even when the pipeline itself is functioning.
 
----
+### Audit timestamps
 
-# Data Lineage
+The project uses technical timestamps such as:
 
-Lineage describes where data originated and how it moves through downstream models.
+- `ingested_at`
+- `loaded_at`
+- `transformed_at`
+- `modeled_at`
+- `updated_at`
 
+Their exact meaning should be documented in the data dictionary and kept
+consistent across models.
+
+### Lineage
+
+dbt derives model dependencies from `source()` and `ref()` calls.
 Example:
 
 ```text
 raw.orders
-     ↓
-bronze_orders
-     ↓
-silver_orders
-     ↓
-fact_order_items
+   -> bronze_orders
+   -> silver_orders
+   -> Gold fact model
 ```
 
-Another:
+The lineage and model structure are documented in `docs/data_lineage.md`
+and `docs/data_model.md`.
+
+## Local Setup
+
+The commands below use PowerShell because that is the development shell
+used in the project screenshots. Run commands from the repository root
+unless a different working directory is shown.
+
+### 1. Prerequisites
+
+Install or have access to:
+
+- Python 3.12 (recommended for the documented virtual environment).
+- PostgreSQL 17.x.
+- Git.
+- Power BI Desktop for opening the report.
+- A terminal such as PowerShell or VS Code's integrated terminal.
+
+The documented dbt dependency versions are:
 
 ```text
-raw.products
-     ↓
-bronze_products
-     ↓
-silver_products
-     ↓
-dim_products
-     ↓
-fact_order_items
+dbt-core==1.12.3
+dbt-postgres==1.11.0
 ```
 
-dbt tracks dependencies through:
+### 2. Create and activate a virtual environment
 
-```jinja
-{{ source() }}
-```
-
-and:
-
-```jinja
-{{ ref() }}
-```
-
----
-
-# DAG
-
-The dbt project forms a Directed Acyclic Graph (DAG).
-
-Example:
-
-```text
-raw.orders
-     ↓
-bronze_orders
-     ↓
-silver_orders
-     ↓
-fact_order_items
-```
-
-Each dependency is represented as an edge in the graph.
-
-dbt uses the graph to determine execution order.
-
----
-
-# Jinja and dbt
-
-dbt combines SQL with Jinja templating.
-
-Examples:
-
-```jinja
-{{ ref('silver_orders') }}
-```
-
-and:
-
-```jinja
-{% if is_incremental() %}
-```
-
-Jinja makes dbt models dynamic and reusable.
-
----
-
-# Macros
-
-The project contains:
-
-```text
-macros/add_audit_columns.sql
-macros/generate_timestamp.sql
-macros/modeled_timestamp.sql
-macros/transformed_timestamp.sql
-```
-
-Macros provide reusable SQL/Jinja logic.
-
-They are useful for:
-
-- Reducing repeated code.
-- Standardizing patterns.
-- Improving maintainability.
-- Reusing logic across models.
-
-Not every business transformation should be a macro; macros are most useful when logic is genuinely reusable.
-
----
-
-# Analytical SQL
-
-The Gold layer can answer questions such as:
-
-```text
-How much revenue was generated?
-Which products sell the most?
-Which customers generate the most sales?
-What are daily sales trends?
-Which products have high return rates?
-Which payment methods perform best?
-Which orders are delayed?
-```
-
-The project contains analytical SQL in:
-
-```text
-sql/analytics_queries.sql
-```
-
-and:
-
-```text
-ecommerce_dbt/analyses/data_quantity_analysis.sql
-```
-
----
-
-# Customer Sales Analysis
-
-Example:
-
-```sql
-SELECT
-    c.customer_id,
-    c.customer_name,
-    COUNT(DISTINCT f.order_id) AS total_orders,
-    SUM(f.net_sales_amount) AS total_sales
-FROM analytics_gold.fact_order_items AS f
-JOIN analytics_gold.dim_customers AS c
-    ON f.customer_id = c.customer_id
-GROUP BY
-    c.customer_id,
-    c.customer_name
-ORDER BY total_sales DESC;
-```
-
-This demonstrates:
-
-- Fact-to-dimension joins.
-- Aggregations.
-- `COUNT(DISTINCT ...)`.
-- `SUM()`.
-- `GROUP BY`.
-- Analytical reporting.
-
----
-
-# Product Performance Analysis
-
-Example:
-
-```sql
-SELECT
-    p.product_id,
-    p.product_name,
-    p.category,
-    SUM(f.quantity) AS total_quantity_sold,
-    SUM(f.net_sales_amount) AS total_revenue
-FROM analytics_gold.fact_order_items AS f
-JOIN analytics_gold.dim_products AS p
-    ON f.product_id = p.product_id
-GROUP BY
-    p.product_id,
-    p.product_name,
-    p.category
-ORDER BY total_revenue DESC;
-```
-
----
-
-# Daily Sales Analysis
-
-Example:
-
-```sql
-SELECT
-    DATE(order_date) AS order_day,
-    COUNT(DISTINCT order_id) AS total_orders,
-    SUM(quantity) AS total_items_sold,
-    SUM(net_sales_amount) AS total_revenue
-FROM analytics_gold.fact_order_items
-GROUP BY DATE(order_date)
-ORDER BY order_day;
-```
-
----
-
-# Quantity Analysis
-
-The project contains:
-
-```text
-ecommerce_dbt/analyses/data_quantity_analysis.sql
-```
-
-It examines:
-
-- Total order items.
-- Total quantity.
-- Average quantity.
-- Minimum quantity.
-- Maximum quantity.
-- Negative quantities.
-- Zero quantities.
-- Returned quantities.
-- Products with the highest quantity sold.
-- Unusual quantity patterns.
-
----
-
-# dbt Commands
-
-## Version
-
-```powershell
-dbt --version
-```
-
-## Dependencies
-
-```powershell
-dbt deps
-```
-
-## Environment / Connection
-
-```powershell
-dbt debug
-```
-
-## Parse
-
-```powershell
-dbt parse
-```
-
-## Run all models
-
-```powershell
-dbt run
-```
-
-## Run a layer
-
-```powershell
-dbt run --select bronze
-dbt run --select silver
-dbt run --select gold
-```
-
-## Run a model
-
-```powershell
-dbt run --select fact_order_items
-```
-
-## Run upstream dependencies
-
-```powershell
-dbt run --select +fact_order_items
-```
-
-## Run tests
-
-```powershell
-dbt test
-```
-
-## Test Gold
-
-```powershell
-dbt test --select gold
-```
-
-## Build
-
-```powershell
-dbt build
-```
-
-## Full refresh
-
-```powershell
-dbt run --full-refresh
-```
-
-## Gold full refresh
-
-```powershell
-dbt run --select gold --full-refresh
-```
-
-## Compile
-
-```powershell
-dbt compile
-```
-
-## Compile one model
-
-```powershell
-dbt compile --select silver_orders
-```
-
-## Source freshness
-
-```powershell
-dbt source freshness
-```
-
----
-
-# Recommended End-to-End Execution
-
-```text
-1. Generate source data
-        ↓
-2. Load RAW into PostgreSQL
-        ↓
-3. Validate source counts and relationships
-        ↓
-4. dbt deps
-        ↓
-5. dbt debug
-        ↓
-6. dbt parse
-        ↓
-7. dbt run
-        ↓
-8. dbt test
-        ↓
-9. dbt source freshness
-        ↓
-10. dbt build
-        ↓
-11. Run analytical SQL
-```
-
-For a complete dbt model-and-test workflow:
-
-```powershell
-dbt build
-```
-
----
-
-# Environment Setup
-
-## Create Virtual Environment
+From the repository root:
 
 ```powershell
 py -3.12 -m venv .venv
-```
-
-## Activate
-
-```powershell
 .\.venv\Scripts\Activate.ps1
-```
-
-## Install Dependencies
-
-```powershell
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Verify
+If `requirements.txt` is malformed or contains unexpected characters,
+correct it before installing. Keep package requirements on separate
+valid lines.
 
-```powershell
-dbt --version
-```
+### 3. Configure environment variables and dbt profile
 
----
+Use a local `.env` file or another secure local configuration mechanism
+for database credentials. Do not commit `.env` or real passwords.
 
-# PostgreSQL Setup
+The dbt profile must match the `name:` in
+`ecommerce_dbt/dbt_project.yml`, and its target must point to the
+correct PostgreSQL host, port, database, user, password, and schema. The
+profile is commonly stored in the user's dbt configuration directory;
+the CI workflow described below uses a separate CI profile.
 
-Create the database using:
+### 4. Create and load raw data
+
+The repository contains SQL scripts for database/table setup and
+raw-data loading:
 
 ```text
 sql/01_create_database.sql
-```
-
-Create Raw tables:
-
-```text
 sql/02_create_raw_tables.sql
+sql/03_insert_raw_data.sql
+sql/04_add_ingested_at.sql
+sql/05_raw_data_quality_checks.sql
 ```
 
-Generate mock data:
+The current Python scripts live under `ecommerce_dbt/scripts/`. Inspect
+their arguments and expected working directory before executing them.
+The intended sequence is:
 
-```powershell
-python scripts\generate_raw_data.py
-```
+1. Create the database.
+2. Create raw tables.
+3. Generate the data.
+4. Load the data into PostgreSQL.
+5. Validate row counts, keys, relationships, and controlled
+    data-quality scenarios.
 
-Load generated SQL:
+Do not run destructive database commands against a database containing
+data you need to preserve.
 
-```powershell
-psql -U postgres -d ecommerce_analytics --single-transaction -v ON_ERROR_STOP=1 -f sql_insert_raw_data.sql
-```
+## Run the Pipeline
 
-The generated data is validated for:
-
-- Record counts.
-- Relationships.
-- Timestamps.
-- Controlled data-quality scenarios.
-- SQL generation.
-
----
-
-# Running dbt
-
-Move into:
+From the repository root:
 
 ```powershell
 cd ecommerce_dbt
 ```
 
-Then:
+Check dbt and its connection:
 
 ```powershell
+dbt --version
 dbt deps
 dbt debug
+```
+
+Parse and compile:
+
+```powershell
 dbt parse
-dbt build
+dbt compile
 ```
 
----
-
-# End-to-End Lineage
-
-```text
-Python Generator
-       │
-       ▼
-Generated SQL
-       │
-       ▼
-PostgreSQL RAW
-       │
-       │ source()
-       ▼
-Bronze
-       │
-       │ ref()
-       ▼
-Silver
-       │
-       │ ref()
-       ▼
-Gold
-       │
-       ├── dim_customers
-       ├── dim_products
-       ├── dim_date
-       ├── fact_order_items
-       └── fact_payments
-       │
-       ▼
-Analytics
-```
-
----
-
-# Data Engineering vs Analytics Engineering
-
-## Data Engineering aspects
-
-- Source data generation.
-- Data ingestion.
-- PostgreSQL storage.
-- Raw data modeling.
-- Data quality.
-- Freshness.
-- Incremental processing.
-- Late-arriving data.
-- Backfills.
-- Audit metadata.
-
-## Analytics Engineering aspects
-
-- dbt models.
-- Layered transformations.
-- SQL business logic.
-- Dimensional modeling.
-- Star Schema.
-- Fact and dimension design.
-- dbt tests.
-- Macros.
-- Lineage.
-- Analytics-ready datasets.
-
----
-
-# Important Engineering Concepts
-
-## OLTP
-
-The Raw layer simulates an OLTP-style source:
-
-- Transaction-oriented.
-- Frequent inserts and updates.
-- Entity-oriented tables.
-- Relational constraints.
-
-## OLAP
-
-The Gold layer is designed for analytical workloads:
-
-- Aggregations.
-- Reporting.
-- Fact/dimension analysis.
-- Business intelligence.
-
-## ETL vs ELT
-
-ETL:
-
-```text
-Extract
- ↓
-Transform
- ↓
-Load
-```
-
-ELT:
-
-```text
-Extract
- ↓
-Load
- ↓
-Transform
-```
-
-This project follows ELT.
-
-## Normalization
-
-The Raw/OLTP-style model separates entities such as:
-
-```text
-customers
-orders
-order_items
-products
-```
-
-This reduces unnecessary duplication and supports transactional integrity.
-
-## Denormalization
-
-The Gold layer intentionally uses a dimensional structure optimized for analytics.
-
----
-
-# Referential Integrity
-
-Examples:
-
-```text
-orders.customer_id
-      ↓
-customers.customer_id
-```
-
-```text
-order_items.product_id
-      ↓
-products.product_id
-```
-
-```text
-order_items.order_id
-      ↓
-orders.order_id
-```
-
-Relationship tests validate these dependencies in dbt models.
-
----
-
-# Idempotency
-
-A production pipeline should be safe to rerun without creating unintended duplicate business records.
-
-Conceptually:
-
-```text
-Run pipeline
-     ↓
-Run pipeline again
-     ↓
-No unintended duplicate business records
-```
-
-The incremental model's `unique_key` supports controlled incremental behavior, but complete idempotency depends on the entire ingestion and transformation design.
-
----
-
-# Slowly Changing Dimensions
-
-The current project does **not** implement a full SCD Type 2 design.
-
-However, customer attributes such as:
-
-```text
-customer_status
-customer_segment
-city
-```
-
-could require historical tracking in a production warehouse.
-
-A future SCD Type 2 implementation could preserve multiple versions of a customer's attributes using effective dates and current-row indicators.
-
----
-
-# Schema Evolution
-
-Production source systems can change:
-
-```text
-New column
-Column rename
-Data type change
-Column removal
-```
-
-The pipeline should have a strategy for detecting and handling these changes.
-
-The current project uses explicit SQL schemas and dbt models, so source schema changes should be reviewed rather than assumed to be automatically safe.
-
----
-
-# Performance and Scalability
-
-The current project is intentionally small and local.
-
-For larger datasets, important considerations include:
-
-- Incremental processing.
-- Query optimization.
-- Appropriate indexes.
-- Efficient joins.
-- Avoiding unnecessary full rebuilds.
-- Partitioning or clustering in warehouse systems.
-- Efficient source ingestion.
-- Appropriate materializations.
-
----
-
-# Production Improvements
-
-If this project were moved to production, possible improvements include:
-
-- Production-grade CDC.
-- Robust incremental watermarks.
-- Lookback windows.
-- Targeted historical backfills.
-- Slowly Changing Dimensions.
-- dbt snapshots.
-- Source contracts.
-- Automated orchestration.
-- CI/CD.
-- Deployment automation.
-- Monitoring and alerting.
-- Data observability.
-- Cloud warehouse deployment.
-- Partitioning/clustering for large data.
-- More comprehensive anomaly detection.
-- Centralized secrets management.
-
----
-
-# Security and Git Practices
-
-The following should not be committed:
-
-```text
-.venv/
-target/
-logs/
-dbt_packages/
-profiles.yml
-.env
-```
-
-These can contain:
-
-- Local dependencies.
-- Generated dbt artifacts.
-- Environment-specific configuration.
-- Database credentials.
-
----
-
-# Recommended `.gitignore`
-
-```gitignore
-# Python virtual environment
-.venv/
-
-# Python cache
-__pycache__/
-*.pyc
-
-# Environment variables
-.env
-
-# dbt generated files
-ecommerce_dbt/target/
-ecommerce_dbt/logs/
-ecommerce_dbt/dbt_packages/
-
-# dbt profile credentials
-profiles.yml
-```
-
----
-
-# Assignment Requirements Mapping
-
-| Assignment Requirement | Status | Current Implementation |
-| --- | --- | --- |
-| Git repository | Completed | Project repository |
-| Local PostgreSQL database | Completed | `ecommerce_analytics` |
-| Raw source tables | Completed | 7 e-commerce source tables |
-| Mock data ingestion | Completed | Python generator + SQL insert script |
-| dbt project | Completed | `ecommerce_dbt` |
-| Source definitions | Completed | `models/sources/sources.yml` |
-| Bronze layer | Completed | 7 Bronze models |
-| Silver layer | Completed | 7 Silver models |
-| Gold layer | Completed | 3 dimensions + 2 facts |
-| Fact tables | Completed | `fact_order_items`, `fact_payments` |
-| Dimension tables | Completed | `dim_customers`, `dim_products`, `dim_date` |
-| Dimensional modeling | Completed | Star Schema |
-| Data quality tests | Completed | Generic and custom dbt tests |
-| Custom data test | Completed | Positive order-item value validation |
-| Incremental processing | Completed | `fact_order_items` |
-| Late-arriving data | Completed | `order_id = 320` |
-| Updated source data | Completed | `order_id = 10` |
-| Backfill strategy | Completed | `docs/backfill_strategy.md` |
-| Data freshness | Completed | Source freshness configuration |
-| dbt macros | Completed | Audit/timestamp macros |
-| Analytical SQL | Completed | Customer, product, daily, and quantity analysis |
-| Data lineage | Completed | `source()` / `ref()` dependencies |
-| Full-refresh validation | Completed | Gold full-refresh successfully executed |
-
----
-
-# Project Validation Status
-
-The current project has successfully completed:
-
-```text
-RAW data generation
-        ↓
-RAW database loading
-        ↓
-Bronze transformation
-        ↓
-Silver transformation
-        ↓
-Gold transformation
-        ↓
-Gold full-refresh
-        ↓
-Data-quality validation workflow
-```
-
-The latest successful Gold full-refresh produced:
-
-```text
-dim_customers       120
-dim_date            251
-dim_products        500
-fact_order_items    632
-fact_payments       320
-```
-
-with:
-
-```text
-PASS=5
-WARN=0
-ERROR=0
-SKIP=0
-NO-OP=0
-REUSED=0
-TOTAL=5
-```
-
-The project should be revalidated after subsequent code or data changes using:
+Build models and tests:
 
 ```powershell
 dbt build
 ```
 
-The exact number of tests and resources can change when test coverage or project configuration changes.
+Useful targeted commands:
 
----
-
-# Final Project Outcome
-
-The project implements an end-to-end Data Engineering and Analytics Engineering workflow:
-
-```text
-             PostgreSQL RAW
-                    │
-                    ▼
-              dbt Sources
-                    │
-                    ▼
-              Bronze Layer
-                    │
-                    ▼
-              Silver Layer
-                    │
-                    ▼
-               Gold Layer
-              /     |                   /      |                   ▼       ▼        ▼
-       Customers Products   Date
-       Dimension Dimension Dimension
-             \      |       /
-              \     |      /
-               ▼    ▼     ▼
-             Order / Payment
-                 Facts
-                    │
-                    ▼
-              Data Quality
-                    │
-                    ▼
-              Analytics
+```powershell
+dbt run --select bronze
+dbt run --select silver
+dbt run --select gold
+dbt run --select fact_order_items
+dbt test
+dbt test --select gold
+dbt source freshness
 ```
 
-The project demonstrates the journey from:
+The exact selection syntax depends on the current model paths and
+configuration. Check `dbt ls` if a selector does not match any nodes.
+
+### Previously recorded execution results
+
+The project context records a successful `dbt compile`, a `dbt run` that
+built 21 models (14 views, 6 tables, and 1 incremental model), and a
+`dbt build` with 240 of 240 operations completed (21 models and 219
+tests). These are historical results from that run; repeat the commands
+after code changes and use the latest output as the source of truth.
+
+## GitHub Actions CI
+
+The repository contains:
 
 ```text
-Raw Transactional Data
-        ↓
-Data Ingestion
-        ↓
-Data Cleaning
-        ↓
-Business Transformation
-        ↓
-Data Quality Validation
-        ↓
-Dimensional Modeling
-        ↓
-Incremental Processing
-        ↓
-Late-Arriving Data Handling
-        ↓
-Analytics-Ready Data
+.github/workflows/dbt-ci.yml
 ```
 
----
+The intended workflow runs on pushes and pull requests targeting `main`,
+and supports manual execution with `workflow_dispatch`. It checks out
+the repository, sets up Python, installs dbt, starts a PostgreSQL
+service, installs dbt packages, checks the connection, compiles the
+project, and runs `dbt build`.
 
-# Key Concepts Demonstrated
+### CI requirements and limitations
 
-## Data Engineering
+- The workflow's `working-directory` must point to `ecommerce_dbt`.
+- The dbt profile name must match the project name in
+  `dbt_project.yml`.
+- CI starts with a **fresh, empty PostgreSQL database**. It does not
+  copy the local raw tables or local data.
+- If the dbt models reference raw tables that are not created and
+  populated during CI, `dbt build` will fail. Add explicit CI
+  setup/seed steps or adjust the workflow to use a reproducible test
+  database before treating CI as passing.
+- Do not commit real credentials. Use GitHub Actions secrets for
+  sensitive values in production. The example local CI credentials
+  should only be used for an isolated ephemeral test database.
+- Keep `.github/workflows/dbt-ci.yml` tracked in Git; do not add it to
+  `.gitignore`.
+- If `.github/profiles.yml` is intended to be committed as a
+  credential-free CI profile, ensure the `.gitignore` rule for
+  `profiles.yml` does not accidentally exclude it. A rule such as
+  `!.github/profiles.yml` can re-include it after the general ignore
+  rule.
+- Verify the workflow on GitHub and review the Actions logs. A file
+  existing in the repository does not mean the workflow has already
+  passed.
 
-- Data sources.
-- Data ingestion.
-- Data pipelines.
-- Data transformation.
-- Data storage.
-- Data quality.
-- Data freshness.
-- Incremental processing.
-- Late-arriving data.
-- Backfills.
-- Lineage.
-- Audit metadata.
+## Known Limitations and Risks
 
-## Databases
+1. **Synthetic data:** Values are generated and should not be
+    represented as real business performance.
+2. **Metric semantics:** The observed `net_sales_amount` behaves like a
+    final line total including tax. Clearly distinguish gross sales, net
+    sales excluding tax, and final line total.
+3. **Invalid sales rows:** Two invalid order-item rows were recorded in
+    a prior validation. Re-run the tests and checks to establish the
+    current state.
+4. **Negative quantity:** A negative-quantity row was observed in a
+    Gold validation even though an older generator note says the
+    scenario was removed. Investigate the current raw data and model
+    output.
+5. **Shipment completeness:** 125 shipments were recorded with unknown
+    delay status and missing delivery duration. Delay rates must use the
+    known-status denominator and disclose missingness.
+6. **Returns cardinality:** The current sample has unique return item
+    references, but a production system may allow multiple return events
+    for an item.
+7. **Date roles:** Return-date relationship was recorded as inactive in
+    Power BI. Measures must activate or otherwise handle that date role
+    when needed.
+8. **Forecasting:** A rolling average is not a future forecast.
+    Describe the actual method implemented.
+9. **Incremental edge cases:** Timestamp watermark logic may miss
+    out-of-order changes; robust CDC, lookback windows, and targeted
+    backfills are possible future improvements.
+10. **Freshness in a sample environment:** Generated timestamps may not
+    represent a continuously arriving source.
+11. **Local-only setup:** PostgreSQL service, local profile, `.env`, and
+    virtual environment are machine-specific unless setup steps are
+    reproduced elsewhere.
+12. **CI database setup:** The workflow's PostgreSQL service starts
+    empty. CI requires raw schema/data setup before model builds can
+    pass.
+13. **Historical counts:** Row counts and metric values in this README
+    are recorded observations, not permanent constants. Use fresh query
+    output for final results.
+14. **No full SCD Type 2:** The project does not currently claim a
+    complete Slowly Changing Dimension Type 2 implementation.
+15. **Scale:** The local dataset is small and is suitable for
+    demonstrating engineering patterns, not proving production-scale
+    performance.
 
-- PostgreSQL.
-- Relational databases.
-- Schemas.
-- Tables.
-- Primary keys.
-- Foreign keys.
-- Constraints.
-- Referential integrity.
-- Relationships.
+## Final Validation Checklist
 
-## SQL
+### Data and dbt
 
-- SELECT.
-- INSERT.
-- WHERE.
-- JOIN.
-- GROUP BY.
-- HAVING.
-- ORDER BY.
-- COUNT.
-- COUNT(DISTINCT ...).
-- SUM.
-- AVG.
-- CASE.
-- COALESCE.
-- NULLIF.
-- Date and timestamp functions.
-- CTEs.
-- Aggregations.
-- Analytical queries.
+- [ ] Confirm the current raw table counts and key relationships.
+- [ ] Run `dbt deps`, `dbt debug`, `dbt parse`, `dbt compile`, and
+      `dbt build`.
+- [ ] Run `dbt source freshness` and interpret results in the context
+      of generated timestamps.
+- [ ] Re-run the singular and generic data quality tests.
+- [ ] Confirm the current Gold model grain, materializations, and
+      schema names.
+- [ ] Reconcile the sales formula across Silver, Gold, SQL, and DAX.
+- [ ] Investigate any negative quantity and line-total mismatch
+      records.
+- [ ] Verify payment, return, and shipment metrics with current query
+      results.
 
-## OLTP and OLAP
+### Semantic layer and dashboards
 
-- OLTP.
-- OLAP.
-- Operational vs analytical workloads.
-- Transactional modeling.
-- Analytical modeling.
+- [ ] Verify Power BI relationships, cardinalities, active/inactive
+      date relationships, and filter direction.
+- [ ] Confirm the exact DAX definitions and display formats for all
+      KPI measures.
+- [ ] Check that distinct orders, eligible units, and financial
+      measures use consistent rules.
+- [ ] Validate every dashboard visual against its SQL query or
+      documented DAX measure.
+- [ ] Confirm chronological sorting and time-comparison behavior.
+- [ ] Document the rolling-average calculation and whether a separate
+      future forecast exists.
+- [ ] Add dashboard screenshots or a walkthrough to the documentation
+      if required.
 
-## ELT
+### Repository and CI
 
-```text
-Extract
- ↓
-Load
- ↓
-Transform
-```
+- [ ] Ensure `.venv/`, `.env`, credentials, `target/`, `logs/`, and
+      generated package folders are not committed.
+- [ ] Keep `.github/workflows/dbt-ci.yml` tracked.
+- [ ] Ensure the CI profile is available to the workflow without
+      exposing secrets.
+- [ ] Set up raw tables and data in CI, or document the required CI
+      fixture approach.
+- [ ] Run the GitHub Actions workflow and review the result.
+- [ ] Confirm the PBIX file's final location and submission method.
+- [ ] Update this README if the actual files, commands, counts, or
+      workflow behavior differ from what is documented.
+- [ ] Commit and push the final implementation.
 
-## Medallion Architecture
+## Conclusion
 
-```text
-Raw
- ↓
-Bronze
- ↓
-Silver
- ↓
-Gold
-```
+This project demonstrates a complete learning-oriented analytics
+engineering workflow: generated source data, PostgreSQL raw storage, dbt
+transformations across Bronze/Silver/Gold, data quality checks,
+incremental-processing concepts, a documented semantic layer, SQL-backed
+analysis, and three Power BI dashboards.
 
-## dbt
-
-- dbt models.
-- `source()`.
-- `ref()`.
-- `dbt_project.yml`.
-- Materializations.
-- Views.
-- Tables.
-- Incremental models.
-- Jinja.
-- Macros.
-- YAML configuration.
-- Data tests.
-- Source freshness.
-- Lineage.
-- Compilation.
-- Full refresh.
-- Model selection.
-- `dbt build`.
-
-## Dimensional Modeling
-
-- Fact tables.
-- Dimension tables.
-- Fact grain.
-- Measures.
-- Keys.
-- Star Schema.
-- Analytical modeling.
-- Date dimension.
-
-## Data Quality
-
-- Not-null tests.
-- Unique tests.
-- Relationship tests.
-- Singular tests.
-- Business-rule validation.
-- Reconciliation checks.
-- Referential integrity.
-
-## Incremental Processing
-
-- New-record processing.
-- Updated-record processing.
-- `unique_key`.
-- `is_incremental()`.
-- Ingestion timestamps.
-- Update timestamps.
-- Full refresh.
-- Incremental limitations.
-
-## Advanced Data Engineering
-
-- Late-arriving data.
-- Backfills.
-- Source freshness.
-- Lineage.
-- DAGs.
-- Idempotency.
-- Schema evolution.
-- Slowly Changing Dimensions.
-- Scalability.
-- Performance.
-- Production orchestration and CI/CD concepts.
-
----
-
-# Future Improvements
-
-The current implementation satisfies the core project requirements, but it can be extended with:
-
-- Slowly Changing Dimensions.
-- dbt snapshots.
-- More advanced incremental strategies.
-- Change Data Capture.
-- Lookback windows.
-- Targeted backfills.
-- Source contracts.
-- dbt exposures.
-- Additional fact tables.
-- Power BI or Tableau dashboards.
-- Apache Airflow orchestration.
-- GitHub Actions CI/CD.
-- Advanced anomaly detection.
-- Larger datasets.
-- Partitioning/clustering strategies.
-- Cloud data warehouse deployment.
-- Production monitoring and alerting.
-
----
-
-# Conclusion
-
-This project demonstrates a complete small-scale **Data Engineering and Analytics Engineering pipeline** using PostgreSQL and dbt.
-
-It starts with OLTP-style e-commerce source data:
-
-```text
-customers
-products
-orders
-order_items
-payments
-shipments
-returns
-```
-
-and transforms it through:
-
-```text
-RAW
- ↓
-BRONZE
- ↓
-SILVER
- ↓
-GOLD
-```
-
-The final Gold layer contains:
-
-```text
-dim_customers
-dim_products
-dim_date
-
-fact_order_items
-fact_payments
-```
-
-The project also demonstrates:
-
-- ELT.
-- Medallion architecture.
-- Dimensional modeling.
-- Star Schema.
-- Fact table grain.
-- Data quality testing.
-- Referential integrity.
-- Incremental processing.
-- Late-arriving data.
-- Backfills.
-- Source freshness.
-- Audit timestamps.
-- dbt macros.
-- Data lineage.
-- Analytical SQL.
-- Debugging and full-refresh workflows.
-
-The implementation has been validated through successful PostgreSQL loading, dbt transformations, Gold full-refresh execution, and data-quality validation.
+The final submission should prioritize reproducibility and consistent
+metric definitions. The most important final checks are to validate the
+current database rather than rely on historical counts, align sales
+definitions across dbt/SQL/DAX, disclose incomplete shipment data, and
+confirm that the GitHub Actions workflow can build the project from a
+fresh CI database.
