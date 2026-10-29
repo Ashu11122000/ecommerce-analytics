@@ -1,9 +1,8 @@
-# ============================================================
-# E-COMMERCE ANALYTICS ENGINEERING
 # File: models/sources/sources.yml
 # Purpose: Define raw PostgreSQL sources for dbt
-# ============================================================
 
+# version: 2 means this file is using the dbt v2 YAML schema for sources. 
+# v2 YAML schema defines the structure and metadata for sources, including their tables, columns, descriptions, and tests.
 version: 2
 
 sources:
@@ -19,6 +18,7 @@ sources:
     # Warning threshold: 24 hours.
     # Error threshold: 48 hours.
     config:
+      # loaded_at_field: ingested_at is used to track when the data was last loaded into the source.
       loaded_at_field: ingested_at
       freshness:
         warn_after:
@@ -32,11 +32,8 @@ sources:
         - source
 
     tables:
-      # ======================================================
       # CUSTOMERS
       # Grain: One row per customer.
-      # ======================================================
-
       - name: customers
         description: "Raw customer records."
         config:
@@ -100,11 +97,8 @@ sources:
             data_tests:
               - not_null
 
-      # ======================================================
       # PRODUCTS
       # Grain: One row per product.
-      # ======================================================
-
       - name: products
         description: "Raw product records."
         config:
@@ -162,11 +156,8 @@ sources:
             data_tests:
               - not_null
 
-      # ======================================================
       # ORDERS
       # Grain: One row per order.
-      # ======================================================
-
       - name: orders
         description: "Raw customer order records."
         config:
@@ -230,11 +221,8 @@ sources:
             data_tests:
               - not_null
 
-      # ======================================================
       # ORDER ITEMS
       # Grain: One row per order line item.
-      # ======================================================
-
       - name: order_items
         description: "Raw order line-item records."
         config:
@@ -291,12 +279,9 @@ sources:
             data_tests:
               - not_null
 
-      # ======================================================
       # PAYMENTS
       # Grain: One row per payment transaction.
       # An order may have multiple payment records.
-      # ======================================================
-
       - name: payments
         description: "Raw payment transaction records."
         config:
@@ -349,11 +334,8 @@ sources:
             data_tests:
               - not_null
 
-      # ======================================================
       # SHIPMENTS
       # Grain: One row per shipment.
-      # ======================================================
-
       - name: shipments
         description: "Raw shipment records."
         config:
@@ -405,12 +387,9 @@ sources:
             data_tests:
               - not_null
 
-      # ======================================================
       # RETURNS
       # Grain: One row per return record.
       # An order item may have multiple return records.
-      # ======================================================
-
       - name: returns
         description: "Raw product return records."
         config:
