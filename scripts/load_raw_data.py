@@ -1,4 +1,3 @@
-
 """
 Load generated synthetic e-commerce data into PostgreSQL RAW tables.
 
@@ -13,9 +12,9 @@ Safety:
     The script requires explicit confirmation before executing it.
 
 PowerShell examples (from project root):
-    python scripts\load_raw_data.py --dry-run
-    python scripts\load_raw_data.py
-    python scripts\load_raw_data.py --yes
+    python scripts\\load_raw_data.py --dry-run
+    python scripts\\load_raw_data.py
+    python scripts\\load_raw_data.py --yes
 """
 
 from __future__ import annotations
@@ -60,8 +59,8 @@ def load_env_file(env_path: Path) -> None:
     Load simple KEY=VALUE entries from .env.
 
     Existing environment variables take precedence.
-    This supports ordinary values and matching surrounding quotes.
-    It does not support variable expansion.
+    Supports ordinary values and matching surrounding quotes.
+    Does not support variable expansion.
     """
     if not env_path.is_file():
         return
@@ -96,21 +95,17 @@ def load_env_file(env_path: Path) -> None:
 
 
 def get_database_url() -> str | None:
-    """Read DATABASE_URL from the environment or root .env file."""
+    """Read DATABASE_URL from the environment or project-root .env."""
     load_env_file(ENV_FILE)
-
     database_url = os.getenv("DATABASE_URL", "").strip()
-
     return database_url or None
 
 
 def safe_connection_summary(database_url: str) -> tuple[str, str]:
     """Return host and database name without exposing the password."""
     parsed = urlparse(database_url)
-
     host = parsed.hostname or "(host not specified)"
     database = parsed.path.lstrip("/") or "(database not specified)"
-
     return host, database
 
 
@@ -118,11 +113,9 @@ def safe_connection_summary(database_url: str) -> tuple[str, str]:
 # SQL FILE VALIDATION
 # ------------------------------------------------------------
 
-def validate_sql_file(
-    sql_path: Path,
-) -> tuple[str | None, str | None]:
+def validate_sql_file(sql_path: Path) -> tuple[str | None, str | None]:
     """
-    Check that the generated SQL file exists and targets RAW tables.
+    Check that the generated SQL file exists and targets expected RAW tables.
 
     Returns:
         (sql_text, None) when valid.
@@ -131,7 +124,7 @@ def validate_sql_file(
     if not sql_path.is_file():
         return None, (
             f"SQL file not found: {sql_path}\n"
-            "Run python scripts\\generate_raw_data.py first."
+            r"Run python scripts\generate_raw_data.py first."
         )
 
     try:
@@ -151,9 +144,7 @@ def validate_sql_file(
         )
 
     if "RAW." not in normalized_sql:
-        return None, (
-            "The SQL file does not appear to target the raw schema."
-        )
+        return None, "The SQL file does not appear to target the raw schema."
 
     return sql_text, None
 
@@ -186,7 +177,7 @@ def count_insert_statements(sql_text: str) -> dict[str, int]:
 
 
 def print_preview(sql_text: str) -> None:
-    """Display the SQL file and expected insert counts."""
+    """Display the generated SQL file and expected insert counts."""
     counts = count_insert_statements(sql_text)
 
     print("\nGenerated SQL preview")
@@ -219,9 +210,7 @@ def check_required_tables(connection) -> list[str]:
             """
         )
 
-        existing_tables = {
-            row[0] for row in cursor.fetchall()
-        }
+        existing_tables = {row[0] for row in cursor.fetchall()}
 
     return [
         table_name
@@ -230,12 +219,41 @@ def check_required_tables(connection) -> list[str]:
     ]
 
 
+def check_ingested_at_columns(connection) -> list[str]:
+    """Return expected RAW tables without an ingested_at column."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT table_name
+            FROM information_schema.columns
+            WHERE table_schema = 'raw'
+              AND column_name = 'ingested_at'
+            """
+        )
+
+        tables_with_ingested_at = {row[0] for row in cursor.fetchall()}
+
+    return [
+        table_name
+        for table_name in EXPECTED_RAW_TABLES
+        if table_name not in tables_with_ingested_at
+    ]
+
+
 # ------------------------------------------------------------
 # LOAD DATA
 # ------------------------------------------------------------
 
 def load_data(database_url: str, sql_text: str) -> bool:
-    """Execute the generated SQL script against PostgreSQL."""
+    """
+    Execute the generated SQL and set actual RAW ingestion timestamps.
+
+    The generated SQL truncates and reloads the RAW tables. After inserting
+    the records, this function updates ingested_at for every loaded row.
+
+    All operations run in one transaction. If an operation fails, PostgreSQL
+    rolls the transaction back rather than leaving a partially loaded dataset.
+    """
     if psycopg is None:
         print("ERROR: psycopg is not installed.")
         print('Install it with: python -m pip install "psycopg[binary]"')
@@ -250,8 +268,7 @@ def load_data(database_url: str, sql_text: str) -> bool:
     print(f"SQL file: {SQL_FILE}")
 
     try:
-        # psycopg's connection context rolls back an open transaction
-        # on exceptions and closes the connection when finished.
+        # The connection context commits on success and rolls back on error.
         with psycopg.connect(
             database_url,
             connect_timeout=8,
@@ -262,16 +279,26 @@ def load_data(database_url: str, sql_text: str) -> bool:
 
             if missing_tables:
                 print("\nERROR: Required RAW tables are missing:")
-
                 for table_name in missing_tables:
                     print(f"  - raw.{table_name}")
 
+                print("\nCreate the RAW schema and tables before loading data.")
+                return False
+
+            missing_ingestion_columns = check_ingested_at_columns(connection)
+
+            if missing_ingestion_columns:
+                print("\nERROR: Required ingested_at columns are missing:")
+                for table_name in missing_ingestion_columns:
+                    print(f"  - raw.{table_name}")
+
                 print(
-                    "\nCreate the RAW schema and tables before loading data."
+                    "\nAdd ingested_at to the listed RAW tables before "
+                    "running this loader."
                 )
                 return False
 
-            print("\nAll required RAW tables are present.")
+            print("\nAll required RAW tables and ingested_at columns are present.")
             print("Executing generated SQL...")
 
             # The generated script contains multiple SQL statements.
@@ -279,20 +306,44 @@ def load_data(database_url: str, sql_text: str) -> bool:
             with connection.cursor() as cursor:
                 cursor.execute(sql_text, prepare=False)
 
-            print("\nLOAD SUCCESSFUL")
             print("Generated SQL executed successfully.")
+            print("Updating ingested_at to the actual load timestamp...")
+
+            # CURRENT_TIMESTAMP is stable for the whole PostgreSQL transaction.
+            # All rows and all seven tables therefore receive a consistent
+            # ingestion timestamp for this full-refresh load.
+            updated_rows: dict[str, int] = {}
+
+            with connection.cursor() as cursor:
+                for table_name in EXPECTED_RAW_TABLES:
+                    cursor.execute(
+                        f"""
+                        UPDATE raw.{table_name}
+                        SET ingested_at = CURRENT_TIMESTAMP
+                        """
+                    )
+                    updated_rows[table_name] = cursor.rowcount
+
+            print("\nIngestion timestamp update:")
+            for table_name in EXPECTED_RAW_TABLES:
+                print(
+                    f"  raw.{table_name:<12} "
+                    f"{updated_rows[table_name]:>5} rows updated"
+                )
+
             print("\nFinal RAW table row counts:")
 
             with connection.cursor() as cursor:
                 for table_name in EXPECTED_RAW_TABLES:
-                    # Table names come exclusively from the constant list.
                     cursor.execute(
                         f"SELECT COUNT(*) FROM raw.{table_name}"
                     )
                     row_count = cursor.fetchone()[0]
-
                     print(f"  raw.{table_name:<12} {row_count:>5}")
 
+            # The connection context commits after this block completes.
+            print("\nLOAD SUCCESSFUL")
+            print("RAW data loaded and ingestion timestamps updated.")
             return True
 
     except Exception as exc:
@@ -300,10 +351,10 @@ def load_data(database_url: str, sql_text: str) -> bool:
         print(f"Error type: {type(exc).__name__}")
         print(f"Error: {exc}")
         print(
-            "\nReview the SQL error, source table definitions, "
-            "database settings, and permissions."
+            "\nThe database transaction was rolled back if it had begun. "
+            "Review the SQL error, source table definitions, database "
+            "settings, and permissions."
         )
-
         return False
 
 
@@ -343,7 +394,7 @@ def parse_args() -> argparse.Namespace:
 # ------------------------------------------------------------
 
 def main() -> int:
-    """Run validation and load data when explicitly confirmed."""
+    """Run validation and load data only after explicit confirmation."""
     args = parse_args()
 
     sql_text, error = validate_sql_file(SQL_FILE)
@@ -372,9 +423,7 @@ def main() -> int:
 
     if not args.yes:
         print("\nWARNING: DESTRUCTIVE OPERATION")
-        print(
-            "This will truncate and reload the existing RAW tables."
-        )
+        print("This will truncate and reload the existing RAW tables.")
 
         confirmation = input(
             "Type LOAD RAW DATA to continue, or press Enter to cancel: "
@@ -385,7 +434,6 @@ def main() -> int:
             return 0
 
     success = load_data(database_url, sql_text)
-
     return 0 if success else 1
 
 
