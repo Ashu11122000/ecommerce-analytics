@@ -22,13 +22,6 @@
 --   payment_update_delay_days:
 --     Calendar-day difference between payment_date and updated_at,
 --     as calculated in the Silver model.
---
--- Important assumptions:
---   - payment_id uniquely identifies a payment record.
---   - Payment amounts must not be aggregated across currencies
---     unless a consistent currency-conversion method is applied.
---   - Payment statuses and classifications are inherited from Silver.
---   - Missing payment dates produce a NULL date dimension key.
 -- ============================================================
 
 WITH payments_base AS (

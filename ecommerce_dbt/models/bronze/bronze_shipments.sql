@@ -15,15 +15,6 @@
 --   4. Preserve shipment and delivery timestamps.
 --   5. Retain source timestamps for data lineage.
 --   6. Add a model execution timestamp.
---
--- Important assumptions:
---   - An order may have multiple shipment records.
---   - No joins or aggregations are performed in Bronze.
---   - Source timestamps are preserved without modification.
---   - Shipment status rules and delivery-duration calculations
---     are handled downstream in Silver/Gold.
---   - loaded_at is query execution time because this model
---     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT

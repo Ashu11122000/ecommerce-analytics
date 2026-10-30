@@ -16,15 +16,6 @@
 --   5. Identify order items with recorded returned quantities.
 --   6. Flag returned quantities exceeding ordered quantities.
 --   7. Calculate a return rate when the denominator is valid.
---
--- Assumptions:
---   - Expected line total = quantity * unit price
---     - discount amount + tax amount.
---   - A variance greater than 0.01 is a mismatch.
---   - Returned quantity does not necessarily mean a completed
---     return; return workflow status is modeled separately.
---   - Anomalies are flagged, not silently corrected or removed.
---   - Grain remains one row per order_item_id.
 -- ============================================================
 
 WITH order_items_base AS (

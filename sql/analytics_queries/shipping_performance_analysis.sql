@@ -23,17 +23,6 @@
 --   6. Are order and shipment statuses consistent?
 --   7. Which shipment records need investigation?
 --
--- Assumptions:
---   - Shipment duration is delivered_at minus shipped_at.
---   - Duration is measured in elapsed days, including fractions.
---   - Seven days is a provisional delay threshold, not a
---     confirmed contractual service-level agreement (SLA).
---   - Undelivered shipments are not assigned a completed
---     delivery duration.
---   - Shipment records are counted individually.
---   - The latest order date is used as the reference date for
---     age calculations where appropriate.
---
 -- All queries are read-only.
 -- ============================================================
 

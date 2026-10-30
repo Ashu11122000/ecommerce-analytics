@@ -21,16 +21,6 @@
 --
 --   is_return_approved:
 --     Approval indicator inherited from Silver status rules.
---
--- Important assumptions:
---   - Each return_id identifies one return record.
---   - Refund amounts use the relevant transaction currency.
---   - Amounts across different currencies must not be aggregated
---     without a currency-conversion method.
---   - Return classifications and quality indicators are inherited
---     from Silver.
---   - One return record may refer to an order item, and multiple
---     return records may exist for the same order item.
 -- ============================================================
 
 WITH returns_base AS (

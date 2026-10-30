@@ -16,16 +16,6 @@
 --   4. Assign products to fixed selling-price bands.
 --   5. Identify products with recognized active statuses.
 --   6. Preserve source lineage and add a transformation timestamp.
---
--- Important assumptions:
---   - Selling price and cost price use the same currency and unit.
---   - Profit amount = selling price - cost price per unit.
---   - Profit margin = profit amount / selling price * 100.
---   - Stock status uses stock_quantity and reorder_level.
---   - Stock equal to the reorder level is classified as Low Stock.
---   - Price bands are reporting conventions, not universal
---     definitions of product value.
---   - Source anomalies are flagged, not silently corrected.
 -- ============================================================
 
 WITH products_base AS (

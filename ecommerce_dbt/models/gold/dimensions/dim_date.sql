@@ -21,16 +21,6 @@
 --   3. Create a YYYYMMDD integer date key.
 --   4. Add calendar, week, month, quarter, and weekend attributes.
 --   5. Add a Gold modeling timestamp.
---
--- Important assumptions:
---   - The date range covers valid dates from all four Silver models.
---   - The calendar includes both boundary dates.
---   - Week numbering follows PostgreSQL's EXTRACT(WEEK) convention,
---     which uses ISO week numbering.
---   - day_of_week follows PostgreSQL DOW:
---     Sunday = 0, Monday = 1, ..., Saturday = 6.
---   - is_weekend identifies Saturday and Sunday.
---   - Dates are not generated if all four sources contain no valid dates.
 -- ============================================================
 
 WITH date_range AS (

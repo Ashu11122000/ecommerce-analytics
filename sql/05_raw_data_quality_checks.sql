@@ -23,12 +23,6 @@
 --  13. Missing financial values
 --  14. Duplicate customer emails
 --  15. Return reconciliation
---
--- IMPORTANT:
---   - Read-only: this script does not modify data.
---   - Review diagnostic results before treating them as errors.
---   - Synthetic data may intentionally contain anomalies.
---   - Raw anomalies should be handled explicitly in dbt.
 -- ============================================================
 
 

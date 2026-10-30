@@ -1,43 +1,35 @@
-# ============================================================
-# E-COMMERCE ANALYTICS ENGINEERING
-# File: ecommerce_dbt/dbt_project.yml
 # Purpose: Main dbt project configuration
-# ============================================================
 
-# ------------------------------------------------------------
 # PROJECT SETTINGS
-# ------------------------------------------------------------
-
 name: "ecommerce_dbt"
 version: "1.0.0"
+
+# config-version: 2 means that this project uses dbt's v2 configuration format.
+# dbt's v2 configuration format is the current standard and provides more features and flexibility compared to v1.
 config-version: 2
 
 # Must match the profile name in your profiles.yml file.
 profile: "ecommerce_dbt"
 
-# ------------------------------------------------------------
 # PROJECT DIRECTORY PATHS
 # Keep these aligned with your existing folder structure.
-# ------------------------------------------------------------
 
+# The paths below are relative to the root of dbt project directory.
+# These paths tell dbt where to find models, analyses, tests, macros etc. in project.
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
-seed-paths: ["seeds"]
 macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
 
-# ------------------------------------------------------------
 # CLEAN TARGETS
 # Directories removed by `dbt clean`.
 # This does not delete your source SQL files.
-# ------------------------------------------------------------
-
+# target/ is a temporary directory where dbt stores compiled SQL files and other artifacts.
+# dbt_packages/ is where dbt stores installed packages.
 clean-targets:
   - "target"
   - "dbt_packages"
 
-# ------------------------------------------------------------
 # MODEL CONFIGURATION
 # These settings apply to models under models/.
 #
@@ -46,11 +38,9 @@ clean-targets:
 # the target schema in profiles.yml and dbt's schema naming
 # behavior. Verify the actual destination schemas before
 # running a full build.
-# ------------------------------------------------------------
 
 models:
   ecommerce_dbt:
-    # ========================================================
     # BRONZE LAYER
     # Purpose:
     # - Read from the raw source tables.
@@ -58,31 +48,24 @@ models:
     # - Preserve source-level business information.
     #
     # Materialization: VIEW
-    # ========================================================
-
     bronze:
       +schema: bronze
       +materialized: view
       +tags:
         - bronze
 
-    # ========================================================
     # SILVER LAYER
     # Purpose:
     # - Clean and standardize data.
     # - Derive reusable business attributes.
-    # - Flag data quality issues.
     #
     # Materialization: VIEW
-    # ========================================================
-
     silver:
       +schema: silver
       +materialized: view
       +tags:
         - silver
 
-    # ========================================================
     # GOLD LAYER
     # Purpose:
     # - Provide analytics-ready dimensions and fact tables.
@@ -91,8 +74,6 @@ models:
     # Materialization: TABLE
     # Applies to models in gold/ and its subdirectories,
     # including gold/dimensions/ and gold/facts/.
-    # ========================================================
-
     gold:
       +schema: gold
       +materialized: table

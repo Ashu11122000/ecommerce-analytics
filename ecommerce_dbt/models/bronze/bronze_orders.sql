@@ -15,16 +15,6 @@
 --   4. Replace NULL shipping, discount, and tax amounts with 0.
 --   5. Preserve source update and ingestion timestamps.
 --   6. Add a model execution timestamp.
---
--- Important assumptions:
---   - No joins or aggregations; source order grain is preserved.
---   - NULL monetary values are treated as zero.
---   - INITCAP standardizes capitalization but may alter labels
---     whose original capitalization is meaningful.
---   - Order totals and status mappings must be validated
---     downstream in Silver and Gold.
---   - loaded_at is query execution time because this model
---     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT

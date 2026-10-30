@@ -17,18 +17,6 @@
 --
 -- Grain:
 --   One row per calendar month, unless otherwise specified.
---
--- Assumptions:
---   - Cancelled orders are excluded.
---   - Revenue uses raw.orders.total_amount.
---   - Returned orders are not automatically excluded because
---     refund and return accounting rules are not yet defined.
---   - Forecasts are exploratory estimates, not predictions
---     guaranteed to match future business performance.
---   - Months without qualifying orders are filled with zero.
---   - The final calendar month may be incomplete.
---
--- This script is read-only.
 -- ============================================================
 
 

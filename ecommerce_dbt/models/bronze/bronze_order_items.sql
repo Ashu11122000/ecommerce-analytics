@@ -14,19 +14,6 @@
 --   3. Replace missing returned quantity with zero.
 --   4. Preserve source update and ingestion timestamps.
 --   5. Add a model execution timestamp for audit visibility.
---
--- Important assumptions:
---   - No joins or aggregations; source grain is preserved.
---   - NULL discount means no discount was recorded.
---   - NULL tax means no tax was recorded.
---   - NULL returned_quantity means no returned quantity
---     was recorded.
---   - These assumptions must be validated against the
---     source generator and business rules.
---   - Negative quantities and financial anomalies are not
---     silently corrected; they must be flagged downstream.
---   - loaded_at is query execution time because this model
---     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT

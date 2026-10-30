@@ -1,7 +1,3 @@
-
-/*
-File: semantic_layer/metric_validation.sql
-
 Purpose:
     Validate business metrics against the Gold reporting layer.
 
@@ -104,8 +100,8 @@ SELECT
 
     COUNT(*) FILTER (
         WHERE gross_sales_amount IS NOT NULL
-          AND net_sales_amount IS NOT NULL
-          AND net_sales_amount > gross_sales_amount
+            AND net_sales_amount IS NOT NULL
+            AND net_sales_amount > gross_sales_amount
     ) AS rows_where_net_exceeds_gross
 
 FROM gold.fact_order_items;
@@ -132,7 +128,7 @@ WITH order_totals AS (
     FROM gold.fact_order_items
 
     WHERE is_valid_for_sales IS TRUE
-      AND order_id IS NOT NULL
+        AND order_id IS NOT NULL
 
     GROUP BY order_id
 )

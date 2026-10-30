@@ -18,16 +18,6 @@
 -- Grain:
 --   Each query documents its output grain.
 --
--- Assumptions:
---   - Status comparisons are case-insensitive.
---   - Cancelled orders are included in status distributions
---     unless a query explicitly excludes them.
---   - Revenue uses raw.orders.total_amount.
---   - Status values are not assumed to follow a formal state
---     machine; unexpected values are flagged for investigation.
---   - Missing shipment or payment records are not automatically
---     treated as proof of a business failure.
---
 -- All queries are read-only.
 -- ============================================================
 

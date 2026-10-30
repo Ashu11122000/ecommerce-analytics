@@ -18,15 +18,6 @@
 --   3. Classify customers by lifecycle stage.
 --   4. Preserve source and transformation lineage timestamps.
 --   5. Add a Gold modeling timestamp.
---
--- Lifecycle assumptions:
---   - New Customer: tenure under 90 days.
---   - Established Customer: tenure from 90 through 364 days.
---   - Long-Term Customer: tenure of 365 days or more.
---   - Missing tenure is classified as Unknown.
---   - Negative tenure is classified as Invalid Tenure.
---   - Tenure is inherited from silver_customers and is
---     calculated relative to the current date.
 -- ============================================================
 
 WITH customer_dimension AS (

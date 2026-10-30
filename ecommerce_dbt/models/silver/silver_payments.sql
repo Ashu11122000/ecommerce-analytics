@@ -18,16 +18,6 @@
 --   6. Calculate the calendar-day delay between payment_date
 --      and updated_at.
 --   7. Preserve source lineage and add a transformation timestamp.
---
--- Important assumptions:
---   - Payment amounts use the currency associated with the order.
---   - Amount bands use fixed thresholds and may not be comparable
---     across currencies.
---   - Successful payment statuses are explicitly defined below.
---   - Payment update delay measures calendar days between
---     payment_date and updated_at.
---   - A successful payment is not necessarily a completed order.
---   - Source values are preserved; anomalies are not silently fixed.
 -- ============================================================
 
 WITH payments_base AS (

@@ -28,13 +28,6 @@
 --     Medium Margin : Margin >= 10% and < 30%.
 --     High Margin   : Margin >= 30% and < 50%.
 --     Very High Margin: Margin >= 50%.
---
--- Important assumptions:
---   - Margin thresholds are fixed business classifications.
---   - Stock status and price band are inherited from Silver.
---   - Negative margins are retained and classified as Low Margin
---     under the current threshold rules.
---   - One product should produce exactly one Gold dimension row.
 -- ============================================================
 
 WITH product_dimension AS (

@@ -17,15 +17,6 @@
 --   5. Flag invalid return quantities.
 --   6. Calculate return update delay in calendar days.
 --   7. Preserve source lineage and add a transformation timestamp.
---
--- Important assumptions:
---   - Approved, completed, and processed statuses are classified
---     as approved.
---   - Refund per unit = refund_amount / return_quantity.
---   - A positive refund amount indicates a recorded refund amount,
---     not necessarily a refund that has been paid.
---   - Return update delay is measured in calendar days.
---   - Source anomalies are flagged rather than silently corrected.
 -- ============================================================
 
 WITH returns_base AS (
