@@ -29,7 +29,6 @@
 --   - Connect to ecommerce_analytics before execution.
 --   - CREATE TABLE IF NOT EXISTS does not modify existing tables.
 --   - This script does not drop, truncate, or reload data.
---   - Index creation is safe to rerun.
 --   - Existing table definitions must be checked separately.
 -- ============================================================
 

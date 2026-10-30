@@ -16,16 +16,6 @@
 --   4. Classify delivery speed using elapsed duration.
 --   5. Flag deliveries taking more than five days.
 --   6. Preserve source lineage and add a transformation timestamp.
---
--- Important assumptions:
---   - Delivery duration is measured in elapsed time, expressed in days.
---   - A non-null delivered_at timestamp indicates recorded delivery.
---   - Delivery within 2 days is classified as Fast.
---   - Delivery within 5 days is classified as Standard.
---   - Delivery taking more than 5 days is classified as Slow
---     and flagged as delayed.
---   - Negative delivery durations are invalid and are not classified
---     as delayed.
 -- ============================================================
 
 WITH shipments_base AS (

@@ -21,15 +21,7 @@
 --   5. Do paid payment totals reconcile with order totals?
 --   6. Are there duplicate transaction references or invalid values?
 --   7. How are payment outcomes changing over time?
---
--- Assumptions:
---   - Status comparisons are case-insensitive.
---   - raw.payments.amount is the recorded transaction amount.
---   - Only status 'paid' is treated as paid in reconciliation.
---   - Refunds and partial payments require separate accounting rules.
---   - A payment record is not necessarily equivalent to an order.
---   - Success rate denominators are explicitly defined per query.
---
+
 -- Grain:
 --   Documented separately for each query.
 --

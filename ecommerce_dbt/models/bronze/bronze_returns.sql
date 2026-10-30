@@ -15,16 +15,6 @@
 --   4. Convert blank optional text values to NULL.
 --   5. Preserve source timestamps for data lineage.
 --   6. Add a model execution timestamp.
---
--- Important assumptions:
---   - An order item may have multiple return records.
---   - No joins or aggregations are performed in Bronze.
---   - Return quantities and refund amounts are not defaulted
---     or silently corrected.
---   - A return record is not necessarily a completed return.
---   - Return-status business rules belong in Silver/Gold.
---   - loaded_at is query execution time because this model
---     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT

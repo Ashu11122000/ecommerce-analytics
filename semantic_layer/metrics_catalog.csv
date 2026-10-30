@@ -1,7 +1,0 @@
-metric_name,description,formula,source_table,grain,owner
-total_sales,Total net sales, SUM(net_sales_amount),gold.fact_order_items,Order item,Business
-total_orders,Number of distinct orders,COUNT(DISTINCT order_id),gold.fact_order_items,Order,Business
-total_customers,Number of distinct customers,COUNT(DISTINCT customer_key),gold.fact_order_items,Customer,Business
-average_order_value,Average sales per order,Total net sales / distinct orders,gold.fact_order_items,Order,Business
-successful_payment_rate,Percentage of successful payments,Successful payments / total payments,gold.fact_payments,Payment,Operations
-return_rate,Percentage of orders returned,Returned orders / eligible orders,Needs validated return/order logic,Order,Operations

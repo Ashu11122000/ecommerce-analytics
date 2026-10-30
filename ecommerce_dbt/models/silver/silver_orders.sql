@@ -17,18 +17,6 @@
 --   5. Group order statuses for reporting.
 --   6. Identify successful payment statuses.
 --   7. Flag late-arriving orders.
---
--- Important assumptions:
---   - total_amount is the recorded order total.
---   - amount_before_tax = total_amount - tax_amount.
---   - gross_order_value = total_amount - tax_amount
---     + discount_amount.
---   - Orders ingested more than seven days after order_date
---     are flagged as late-arriving.
---   - Financial definitions must be validated against the
---     source data generation logic before dashboard use.
---   - Source records are preserved; anomalies are flagged,
---     not silently corrected or removed.
 -- ============================================================
 
 WITH orders_base AS (

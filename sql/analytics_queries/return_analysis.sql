@@ -27,17 +27,6 @@
 --   7. Are returned quantities greater than ordered quantities?
 --   8. Which return records require investigation?
 --
--- Assumptions:
---   - A return record represents a return event or line-level
---     return record, not necessarily a distinct returned order.
---   - Refund amounts are summed as recorded in raw.returns.
---   - Return statuses are compared case-insensitively.
---   - Return records are not assumed to be approved or completed
---     unless their status explicitly indicates this.
---   - Return rate and refund rate are different metrics.
---   - No return rate is interpreted as a causal measure of
---     product quality or customer dissatisfaction.
---
 -- All queries are read-only.
 -- ============================================================
 

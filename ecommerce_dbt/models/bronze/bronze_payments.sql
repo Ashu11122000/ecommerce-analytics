@@ -15,15 +15,6 @@
 --   4. Preserve the original payment amount for validation.
 --   5. Retain source timestamps for lineage.
 --   6. Add a model execution timestamp.
---
--- Important assumptions:
---   - An order may have multiple payment transactions.
---   - No joins or aggregations are performed in Bronze.
---   - Payment amounts are not defaulted or modified.
---   - Payment status rules and financial reconciliation are
---     handled downstream.
---   - loaded_at is query execution time because this model
---     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT

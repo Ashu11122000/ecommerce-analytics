@@ -24,17 +24,6 @@
 --   6. How concentrated is sales revenue?
 --   7. What are the trends in units sold and discounts?
 --
--- Definitions and assumptions:
---   - Order-level revenue uses raw.orders.total_amount.
---   - Product-level revenue uses raw.order_items.line_total.
---   - Cancelled orders are excluded from commercial sales metrics.
---   - Returned orders are not automatically excluded from revenue.
---   - The meaning of total_amount and line_total should be
---     confirmed against the data generator and business rules.
---   - Revenue is not assumed to equal profit or cash collected.
---   - Monthly growth compares the previous observed month unless
---     a complete calendar series is explicitly generated.
---
 -- All queries are read-only.
 -- ============================================================
 

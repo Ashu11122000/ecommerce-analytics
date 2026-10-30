@@ -20,17 +20,6 @@
 --   - Units ordered: SUM(raw.order_items.quantity)
 --   - Merchandise revenue: SUM(raw.order_items.line_total)
 --
--- Assumptions:
---   - Cancelled orders are excluded from commercial sales metrics.
---   - Returned orders remain included unless separately excluded.
---   - Weeks begin on Monday, following PostgreSQL DATE_TRUNC.
---   - Comparisons use order_date as the reporting date.
---   - Revenue is not equivalent to profit or cash collected.
---   - Missing calendar periods are filled with zero for the
---     calendar-based comparisons in this file.
---   - Zero-filled periods are valid only within the observed
---     minimum and maximum order-date range.
---
 -- All queries are read-only.
 -- ============================================================
 

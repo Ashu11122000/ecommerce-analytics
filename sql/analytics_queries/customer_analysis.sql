@@ -16,15 +16,6 @@
 --   8. Monthly customer acquisition
 --   9. Customer retention proxy
 --  10. Customer revenue concentration
---
--- IMPORTANT:
---   - Read-only queries.
---   - Revenue uses order-level total_amount.
---   - Cancelled orders are excluded from purchasing metrics.
---   - Returned orders are not automatically excluded because
---     return status does not necessarily indicate a full refund.
---   - Customer lifetime revenue is observed revenue, not
---     profit or a predictive lifetime-value estimate.
 -- ============================================================
 
 

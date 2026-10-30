@@ -16,15 +16,6 @@
 --   5. Derive a boolean active-customer indicator.
 --   6. Group customer statuses into reporting categories.
 --   7. Preserve source lineage and add a transformation timestamp.
---
--- Assumptions:
---   - Age is calculated relative to the current date.
---   - Future birth dates produce NULL age and an Unknown age group.
---   - Future signup dates produce NULL tenure.
---   - Only recognized active statuses are marked active.
---   - Status comparisons are case-insensitive and whitespace-trimmed.
---   - Customer identifiers and source grain are preserved.
---   - transformed_at uses the project's transformed_timestamp macro.
 -- ============================================================
 
 WITH customer_base AS (

@@ -23,17 +23,6 @@
 --     4. Discount and tax are non-negative.
 --     5. The recorded and calculated line totals reconcile
 --        within 0.01.
---
--- Important assumptions:
---   - Each order item belongs to one order and one product.
---   - Amounts are expressed in the order's currency.
---   - Net sales includes tax and is not tax-exclusive revenue.
---   - Source values are preserved for auditing.
---   - Ineligible items receive NULL sales measures rather than
---     being deleted or silently corrected.
---   - Return attributes and source quality flags are preserved.
---   - Incremental processing uses a seven-day timestamp lookback.
---   - The LEFT JOIN preserves items if the parent order is missing.
 -- ============================================================
 
 {{

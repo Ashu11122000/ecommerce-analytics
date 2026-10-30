@@ -14,13 +14,6 @@
 --   3. Convert blank optional text fields to NULL.
 --   4. Preserve source business dates and timestamps.
 --   5. Add a model execution timestamp for audit purposes.
---
--- Important:
---   - No deduplication is performed in this model.
---   - No customer business classifications are calculated here.
---   - Source records are not modified by this SELECT statement.
---   - loaded_at is query execution time for this view; it is
---     not a persisted historical load timestamp.
 -- ============================================================
 
 SELECT

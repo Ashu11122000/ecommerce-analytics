@@ -23,13 +23,6 @@
 --
 --   delivery_speed:
 --     Delivery-speed classification inherited from Silver.
---
--- Important assumptions:
---   - shipment_id uniquely identifies a shipment record.
---   - Delivery metrics follow the Silver model's definitions.
---   - Missing or invalid shipment timestamps are not silently
---     converted into valid delivery durations.
---   - Multiple shipments may belong to the same order.
 -- ============================================================
 
 WITH shipments_base AS (

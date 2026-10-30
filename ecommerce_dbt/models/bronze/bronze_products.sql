@@ -15,16 +15,6 @@
 --   4. Preserve original prices and inventory quantities.
 --   5. Retain source timestamps for data lineage.
 --   6. Add a model execution timestamp.
---
--- Important assumptions:
---   - No joins or aggregations are performed in Bronze.
---   - Blank text values are converted to NULL.
---   - Prices, stock quantities, and reorder levels are not
---     silently corrected or defaulted.
---   - Business rules and data quality checks belong downstream
---     in the Silver layer.
---   - loaded_at is query execution time because this model
---     is configured as a view; it is not a persisted load time.
 -- ============================================================
 
 SELECT

@@ -16,13 +16,6 @@
 --   8. Orders without order items
 --   9. Orders with inconsistent payment totals
 --  10. Orders with unusually many items
---
--- IMPORTANT:
---   - Read-only queries; no data is modified.
---   - Thresholds are diagnostic assumptions, not confirmed
---     business rules.
---   - Review flagged records before excluding them.
---   - Designed for PostgreSQL.
 -- ============================================================
 
 

@@ -26,15 +26,6 @@
 --   raw.products
 --   raw.customers
 --
--- Assumptions:
---   - Status comparisons are case-insensitive.
---   - Cancelled orders are excluded from active-order queues.
---   - Return records are counted individually unless explicitly
---     aggregated by order or order item.
---   - Operational age is calculated relative to the latest
---     observed order date in the dataset, not the computer clock.
---   - Synthetic data may not reflect real operational SLAs.
---
 -- All queries are read-only.
 -- ============================================================
 
